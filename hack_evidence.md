@@ -49,8 +49,21 @@
 
 ## Fill in
 
-* Group ID
-* Team members and roles
+* Group number: 2
+* Team members: 
+| Name                    | Student ID  |
+| ----------------------- | ----------- |
+| Ngo Huu Tai             | XB-DN26-008 |
+| Mai Phuoc Khoa          | XB-DN26-033 |
+| Nguyen Tien Hoang Thinh | XB-DN26-047 |
+| Dang Thi Ngoc Thao      | XB-DN26-055 |
+| Nguyen Phu Trieu        | XB-DN26-070 |
+| Nguyen Hung Thinh       | XB-DN26-077 |
+| Huynh Ba Huan           | XB-DN26-106 |
+| Nguyen Van Tuan Anh     | XB-DN26-112 |
+| Le Hoang Viet           | XB-DN26-134 |
+| Hoang Cong Tri Dung     | XB-DN26-148 |
+
 * Project name
 * Domain
 * AWS region
