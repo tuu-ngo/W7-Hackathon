@@ -50,7 +50,10 @@
 ## Fill in
 
 * Group number: 2
-* Team members: 
+---
+
+# Team Members
+
 | Name                    | Student ID  |
 | ----------------------- | ----------- |
 | Ngo Huu Tai             | XB-DN26-008 |
@@ -64,6 +67,7 @@
 | Le Hoang Viet           | XB-DN26-134 |
 | Hoang Cong Tri Dung     | XB-DN26-148 |
 
+---
 * Project name
 * Domain
 * AWS region
