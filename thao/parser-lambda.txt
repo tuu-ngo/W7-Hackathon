@@ -1,0 +1,832 @@
+import os
+import io
+import csv
+import json
+import re
+import time
+import uuid
+import hashlib
+import logging
+from datetime import datetime
+from typing import Any
+
+import boto3
+import psycopg2
+from pypdf import PdfReader
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+cw_client = boto3.client("cloudwatch")
+s3_client = boto3.client("s3")
+
+
+KEYWORD_MAPPING = {
+    "Food": [
+        "highlands", "starbucks", "coffee", "water", "nuoc", "phúc long",
+        "phuc long", "kfc", "lotteria", "coopmart", "winmart", "banh mi",
+        "com tam", "gogi", "haidilao", "shopeefood", "grabfood", "cake",
+        "lunch", "tea"
+    ],
+    "Transport": [
+        "grab", "be ", "bebike", "becar", "xe may", "taxi", "xanh sm",
+        "vban", "xang", "petrolimex", "ve xe", "ve may bay", "airline",
+        "flight", "vietnam airlines"
+    ],
+    "Shopping": [
+        "shopee", "lazada", "tiki", "tiktok shop", "uniqlo", "zara",
+        "quan ao", "sieu thi", "mua sam", "order"
+    ],
+    "Education": [
+        "hoc phi", "tuition", "khoa hoc", "udemy", "coursera", "sach",
+        "giao duc", "truong hoc"
+    ],
+    "Entertainment": [
+        "netflix", "spotify", "rap phim", "cgv", "galaxy", "ve xem phim",
+        "steam", "game", "cinema"
+    ],
+    "Bills": [
+        "bill", "hoa don", "dien", "electric", "water bill", "internet",
+        "vnpt", "viettel", "fpt"
+    ],
+    "Income": [
+        "salary", "luong", "freelance", "payment received", "income"
+    ],
+    "Transfer": [
+        "transfer", "chuyen khoan", "top up", "momo top up"
+    ],
+}
+
+
+COLUMN_ALIASES = {
+    "time": [
+        "ngày", "ngay", "date", "time", "ngày gd", "ngay_gd",
+        "timestamp", "ngày giao dịch", "ngay giao dich", "ngay thanh toan"
+    ],
+    "description": [
+        "nội dung", "noi dung", "description", "diễn giải", "dien giai",
+        "dien giao", "nội dung giao dịch", "noi dung giao dich", "memo",
+        "details", "nd gd"
+    ],
+    "amount": [
+        "số tiền", "so tien", "amount", "giá trị", "gia tri", "tiền ra",
+        "tien ra", "credit", "debit", "ps có", "ps co", "sotien",
+        "so_tien"
+    ],
+    "bank_id": [
+        "bank_id", "mã gd", "ma gd", "mã giao dịch", "ma giao dich",
+        "ma_gd", "transaction id", "txid", "reference", "số lệnh",
+        "so lenh", "so_lenh"
+    ],
+}
+
+
+VALID_CATEGORIES = {
+    "Food",
+    "Transport",
+    "Shopping",
+    "Entertainment",
+    "Bills",
+    "Health",
+    "Education",
+    "Travel",
+    "Income",
+    "Transfer",
+    "Other",
+    "Subscriptions",
+    "Utilities",
+}
+
+
+def get_database_url() -> str:
+    direct_url = os.environ.get("USERSTORE_POSTGRES_URL") or os.environ.get("DATABASE_URL")
+    if direct_url:
+        return direct_url
+
+    param_name = os.environ.get("DB_SECRET_NAME")
+    if not param_name:
+        raise RuntimeError("USERSTORE_POSTGRES_URL, DATABASE_URL, or DB_SECRET_NAME must be set")
+
+    ssm = boto3.client("ssm")
+    response = ssm.get_parameter(Name=param_name, WithDecryption=True)
+    return response["Parameter"]["Value"]
+
+
+def _default_user_id() -> str:
+    return os.environ.get(
+        "DEFAULT_USER_ID",
+        "00000000-0000-0000-0000-000000000001",
+    )
+
+
+def _normalize_uuid(value: str | None, fallback: str | None = None) -> str:
+    fallback = fallback or _default_user_id()
+    try:
+        return str(uuid.UUID(str(value)))
+    except Exception:
+        return fallback
+
+
+def _stable_bank_id(*parts: Any) -> int:
+    raw = "|".join(str(p) for p in parts)
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % 2147483647
+
+
+def _decode_text(file_bytes: bytes) -> str:
+    encodings = ["utf-8-sig", "utf-8", "cp1258", "latin-1"]
+
+    for enc in encodings:
+        try:
+            return file_bytes.decode(enc)
+        except UnicodeDecodeError:
+            continue
+
+    return file_bytes.decode("utf-8", errors="ignore")
+
+
+def clean_amount(amount_value: Any) -> int:
+    if amount_value is None:
+        return 0
+
+    s = str(amount_value).strip()
+    if not s:
+        return 0
+
+    # Hỗ trợ dạng (123,000) là âm
+    is_negative = False
+    if s.startswith("(") and s.endswith(")"):
+        is_negative = True
+
+    if "-" in s:
+        is_negative = True
+
+    s = s.replace("VND", "").replace("vnd", "")
+    s = s.replace("₫", "").replace("đ", "")
+    s = s.replace("(", "").replace(")", "")
+
+    cleaned = re.sub(r"[^\d]", "", s)
+
+    if not cleaned:
+        return 0
+
+    value = int(cleaned)
+    return -value if is_negative else value
+
+
+def parse_date_to_iso(date_value: Any) -> str:
+    if date_value is None:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S+07")
+
+    cleaned_date = str(date_value).strip()
+    cleaned_date = re.sub(r"\+00(:00)?$", "", cleaned_date)
+    cleaned_date = cleaned_date.replace("T", " ")
+
+    formats = [
+        "%Y-%m-%d %H:%M:%S",
+        "%d/%m/%Y %H:%M:%S",
+        "%d-%m-%Y %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%d/%m/%y",
+        "%d-%m-%y",
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(cleaned_date, fmt)
+            return dt.strftime("%Y-%m-%d %H:%M:%S+07")
+        except ValueError:
+            continue
+
+    logger.warning("[DATE WARNING] Could not parse date: %s. Using current time.", cleaned_date)
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S+07")
+
+
+def get_category_by_keyword(description: str) -> tuple[str | None, float]:
+    desc_lower = (description or "").lower()
+
+    for category, keywords in KEYWORD_MAPPING.items():
+        for kw in keywords:
+            if kw in desc_lower:
+                logger.info("[Keyword Match] %s -> %s", kw, category)
+                return category, 1.0
+
+    return None, 0.0
+
+
+def _normalize_category(category: Any) -> str:
+    if not category:
+        return "Other"
+
+    text = str(category).strip()
+
+    for valid in VALID_CATEGORIES:
+        if text.lower() == valid.lower():
+            return valid
+
+    return "Other"
+
+
+def bedrock_few_shot_classify(description: str) -> tuple[str, float]:
+    aws_region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "ap-southeast-1"))
+    model_id = os.environ.get("AI_MODEL_ID")
+
+    if not model_id:
+        return "Other", 0.4
+
+    bedrock = boto3.client(service_name="bedrock-runtime", region_name=aws_region)
+
+    prompt = f"""
+You are a financial assistant.
+
+Classify this transaction description into exactly one category from:
+Food, Transport, Shopping, Entertainment, Bills, Health, Education, Travel, Income, Transfer, Other, Subscriptions, Utilities.
+
+Examples:
+- "TRANSFER TO HIGHLANDS COFFEE" -> {{"category":"Food","confidence":1.0}}
+- "GRAB BIKE" -> {{"category":"Transport","confidence":1.0}}
+- "SHOPEE ORDER" -> {{"category":"Shopping","confidence":0.95}}
+- "Company Monthly Salary" -> {{"category":"Income","confidence":1.0}}
+- "Momo top up" -> {{"category":"Transfer","confidence":0.9}}
+
+Description: "{description}"
+
+Respond strictly as JSON:
+{{"category":"Other","confidence":0.4}}
+""".strip()
+
+    try:
+        response = bedrock.converse(
+            modelId=model_id,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"text": prompt}],
+                }
+            ],
+        )
+
+        text = response["output"]["message"]["content"][0]["text"]
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+
+        if not match:
+            return "Other", 0.4
+
+        data = json.loads(match.group())
+        category = _normalize_category(data.get("category"))
+        confidence = float(data.get("confidence", 0.6))
+
+        return category, confidence
+
+    except Exception as exc:
+        logger.warning("[AI WARNING] Bedrock classify failed: %s", exc)
+        return "Other", 0.4
+
+
+def parse_csv(file_bytes: bytes) -> list[dict]:
+    content = _decode_text(file_bytes).splitlines()
+
+    if not content:
+        return []
+
+    reader = csv.reader(content)
+    header = next(reader, None)
+
+    if not header:
+        return []
+
+    header_lower = [col.lower().strip() for col in header]
+
+    mapping = {}
+    for field, aliases in COLUMN_ALIASES.items():
+        for alias in aliases:
+            if alias in header_lower:
+                mapping[field] = header_lower.index(alias)
+                break
+
+    t_idx = mapping.get("time", 0)
+    d_idx = mapping.get("description", 1)
+    a_idx = mapping.get("amount", 2)
+    b_idx = mapping.get("bank_id")
+
+    required_max_idx = max(t_idx, d_idx, a_idx)
+    txs = []
+
+    for row_idx, row in enumerate(reader, start=1):
+        if not row or len(row) <= required_max_idx:
+            continue
+
+        description = row[d_idx].strip()
+        amount = clean_amount(row[a_idx])
+        time_value = parse_date_to_iso(row[t_idx])
+
+        if not description and amount == 0:
+            continue
+
+        if b_idx is not None and b_idx < len(row):
+            raw_bank_id = str(row[b_idx]).strip()
+            bank_digits = re.sub(r"[^\d]", "", raw_bank_id)
+
+            if bank_digits:
+                bank_id = int(bank_digits) % 2147483647
+            else:
+                bank_id = _stable_bank_id("csv", row_idx, time_value, description, amount)
+        else:
+            bank_id = _stable_bank_id("csv", row_idx, time_value, description, amount)
+
+        txs.append(
+            {
+                "time": time_value,
+                "description": description,
+                "amount": amount,
+                "bank_id": bank_id,
+            }
+        )
+
+    return txs
+
+
+def _extract_text_from_pdf(file_bytes: bytes) -> str:
+    reader = PdfReader(io.BytesIO(file_bytes))
+
+    text_parts = []
+    for page in reader.pages:
+        text_parts.append(page.extract_text() or "")
+
+    return "\n".join(text_parts).strip()
+
+
+def _parse_pdf_by_regex(raw_text: str) -> list[dict]:
+    """
+    Fallback parse PDF text nếu Bedrock extract fail.
+    Bắt các dòng dạng:
+    2026-05-28 Apple iCloud 1111 1111111
+    28/05/2026 cake -333333
+    """
+    txs = []
+
+    line_pattern = re.compile(
+        r"(?P<date>\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4})\s+"
+        r"(?P<desc>.+?)\s+"
+        r"(?P<amount>-?[\d.,]+)\s*(?:VND|vnd|₫|đ)?$"
+    )
+
+    for idx, raw_line in enumerate(raw_text.splitlines(), start=1):
+        line = " ".join(raw_line.strip().split())
+        if not line:
+            continue
+
+        match = line_pattern.search(line)
+        if not match:
+            continue
+
+        description = match.group("desc").strip()
+        amount = clean_amount(match.group("amount"))
+        time_value = parse_date_to_iso(match.group("date"))
+        bank_id = _stable_bank_id("pdf-regex", idx, time_value, description, amount)
+
+        txs.append(
+            {
+                "time": time_value,
+                "description": description,
+                "amount": amount,
+                "bank_id": bank_id,
+            }
+        )
+
+    return txs
+
+
+def parse_pdf_via_ai(file_bytes: bytes) -> list[dict]:
+    logger.info("[PDF] Extracting text from PDF")
+
+    raw_text = _extract_text_from_pdf(file_bytes)
+
+    if not raw_text:
+        raise ValueError(
+            "PDF has no extractable text. It may be a scanned/image PDF. Use text-based PDF or CSV."
+        )
+
+    model_id = os.environ.get("AI_MODEL_ID")
+    aws_region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "ap-southeast-1"))
+
+    if not model_id:
+        logger.warning("[PDF] AI_MODEL_ID missing. Fallback to regex parser.")
+        return _parse_pdf_by_regex(raw_text)
+
+    # Tránh prompt quá dài
+    max_chars = int(os.environ.get("PDF_MAX_CHARS", "12000"))
+    clipped_text = raw_text[:max_chars]
+
+    bedrock = boto3.client(service_name="bedrock-runtime", region_name=aws_region)
+
+    prompt = f"""
+Extract all financial transactions from the bank statement text below.
+
+Return ONLY a valid JSON array. No markdown. No explanation.
+
+Each object must have:
+- time: transaction date/time. Prefer "YYYY-MM-DD HH:MM:SS".
+- description: transaction description.
+- amount: integer. Expense/outflow must be negative. Income/inflow must be positive.
+- bank_id: numeric unique transaction/reference id. If no real id exists, use sequential integer.
+
+Example:
+[
+  {{"time":"2026-05-28 10:26:44","description":"Highlands Coffee","amount":-333333,"bank_id":1}},
+  {{"time":"2026-05-28 10:26:44","description":"Apple iCloud 1111","amount":1111111,"bank_id":2}}
+]
+
+Bank statement text:
+\"\"\"{clipped_text}\"\"\"
+""".strip()
+
+    try:
+        response = bedrock.converse(
+            modelId=model_id,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"text": prompt}],
+                }
+            ],
+        )
+
+        text = response["output"]["message"]["content"][0]["text"]
+        match = re.search(r"\[.*\]", text, re.DOTALL)
+
+        if not match:
+            logger.warning("[PDF] Bedrock returned no JSON array. Fallback to regex.")
+            return _parse_pdf_by_regex(raw_text)
+
+        parsed_list = json.loads(match.group())
+
+        if not isinstance(parsed_list, list):
+            logger.warning("[PDF] Bedrock JSON is not a list. Fallback to regex.")
+            return _parse_pdf_by_regex(raw_text)
+
+        txs = []
+        for idx, item in enumerate(parsed_list, start=1):
+            if not isinstance(item, dict):
+                continue
+
+            description = str(item.get("description") or "").strip()
+            amount = clean_amount(item.get("amount"))
+            time_value = parse_date_to_iso(item.get("time"))
+
+            if not description and amount == 0:
+                continue
+
+            raw_bank_id = str(item.get("bank_id") or "").strip()
+            bank_digits = re.sub(r"[^\d]", "", raw_bank_id)
+
+            if bank_digits:
+                bank_id = int(bank_digits) % 2147483647
+            else:
+                bank_id = _stable_bank_id("pdf-ai", idx, time_value, description, amount)
+
+            txs.append(
+                {
+                    "time": time_value,
+                    "description": description,
+                    "amount": amount,
+                    "bank_id": bank_id,
+                }
+            )
+
+        if txs:
+            return txs
+
+        logger.warning("[PDF] Bedrock extracted 0 txs. Fallback to regex.")
+        return _parse_pdf_by_regex(raw_text)
+
+    except Exception as exc:
+        logger.warning("[PDF ERROR] Bedrock extraction failed: %s. Fallback to regex.", exc)
+        return _parse_pdf_by_regex(raw_text)
+
+
+def _extract_message_body(record: dict) -> dict | None:
+    try:
+        raw_body = record.get("body") or "{}"
+        body = json.loads(raw_body)
+
+        if isinstance(body, dict):
+            return body
+
+        return None
+
+    except Exception as exc:
+        logger.warning("[SQS] Failed to parse message body: %s", exc)
+        return None
+
+
+def _mark_file_status(file_id: str, status: str) -> None:
+    if not file_id:
+        return
+
+    conn = None
+    try:
+        conn = psycopg2.connect(get_database_url())
+        cur = conn.cursor()
+        cur.execute("UPDATE file SET status = %s WHERE file_id = %s", (status, file_id))
+        conn.commit()
+        cur.close()
+
+    except Exception as exc:
+        logger.warning("[STATUS WARNING] Could not update file %s -> %s: %s", file_id, status, exc)
+
+    finally:
+        if conn:
+            conn.close()
+
+
+def _ensure_user(cursor, user_id: str) -> None:
+    cursor.execute(
+        """
+        INSERT INTO "user" (user_id, account, password, budget)
+        VALUES (%s, %s, 'default_password', 0)
+        ON CONFLICT (user_id) DO NOTHING;
+        """,
+        (user_id, f"user-{user_id}"),
+    )
+
+
+def _upsert_file(cursor, file_id: str, user_id: str, file_name: str, status: str) -> None:
+    cursor.execute(
+        """
+        INSERT INTO file (file_id, user_id, file_name, status)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (file_id) DO UPDATE
+        SET user_id = EXCLUDED.user_id,
+            file_name = EXCLUDED.file_name,
+            status = EXCLUDED.status;
+        """,
+        (file_id, user_id, file_name, status),
+    )
+
+
+def _insert_or_update_transaction(
+    cursor,
+    file_id: str,
+    tx: dict,
+    confidence: float,
+    category: str,
+    review_status: str,
+) -> None:
+    cursor.execute(
+        """
+        INSERT INTO transaction
+            (file_id, time, description, amount, confident, category, review_status, bank_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (file_id, bank_id) DO UPDATE
+        SET time = EXCLUDED.time,
+            description = EXCLUDED.description,
+            amount = EXCLUDED.amount,
+            confident = EXCLUDED.confident,
+            category = EXCLUDED.category,
+            review_status = EXCLUDED.review_status;
+        """,
+        (
+            file_id,
+            tx["time"],
+            tx["description"],
+            tx["amount"],
+            confidence,
+            category,
+            review_status,
+            tx["bank_id"],
+        ),
+    )
+
+
+def _invoke_budget_lambda(file_id: str, user_id: str, records_processed: int) -> None:
+    budget_lambda = os.environ.get("BUDGET_LAMBDA_NAME")
+
+    if not budget_lambda:
+        logger.info("[BUDGET] BUDGET_LAMBDA_NAME not configured. Skip invoke.")
+        return
+
+    payload = {
+        "user_id": user_id,
+        "file_id": file_id,
+        "records_processed": records_processed,
+    }
+
+    logger.info("[BUDGET] Invoking %s with payload: %s", budget_lambda, json.dumps(payload))
+
+    lambda_client = boto3.client("lambda")
+    lambda_client.invoke(
+        FunctionName=budget_lambda,
+        InvocationType="Event",
+        Payload=json.dumps(payload).encode("utf-8"),
+    )
+
+
+def _put_latency_metric(context, file_type_tag: str, latency_ms: float) -> None:
+    try:
+        cw_client.put_metric_data(
+            Namespace="BudgetBot/Pipeline",
+            MetricData=[
+                {
+                    "MetricName": "ParsingLatency",
+                    "Dimensions": [
+                        {
+                            "Name": "FunctionName",
+                            "Value": context.function_name,
+                        },
+                        {
+                            "Name": "FileType",
+                            "Value": file_type_tag,
+                        },
+                    ],
+                    "Value": latency_ms,
+                    "Unit": "Milliseconds",
+                }
+            ],
+        )
+        logger.info("[CLOUDWATCH] Custom Metric ParsingLatency sent successfully.")
+
+    except Exception as exc:
+        logger.warning("[CLOUDWATCH ERROR] Could not put metric: %s", exc)
+
+
+def lambda_handler(event, context):
+    pipeline_start_time = time.time()
+
+    logger.info("[LOG 1] Parser Lambda started")
+    logger.info("[EVENT] %s", json.dumps(event)[:2000])
+
+    records = event.get("Records", [])
+
+    if not records:
+        logger.info("[SKIP] Event has no Records")
+        return {
+            "statusCode": 200,
+            "body": "No records",
+        }
+
+    processed = 0
+    total_upserted = 0
+    file_type_tag = "UNKNOWN"
+
+    for sqs_record in records:
+        message_body = _extract_message_body(sqs_record)
+
+        if not message_body:
+            continue
+
+        file_id = str(message_body.get("file_id") or "").strip()
+        file_name = str(message_body.get("file_name") or message_body.get("s3_key") or "").strip()
+        bucket_name = str(message_body.get("bucket_name") or os.environ.get("STORAGE_BUCKET") or "").strip()
+        user_id = _normalize_uuid(message_body.get("user_id"), _default_user_id())
+
+        logger.info(
+            "[SQS] file_id=%s user_id=%s bucket=%s key=%s",
+            file_id,
+            user_id,
+            bucket_name,
+            file_name,
+        )
+
+        if not file_id or not file_name or not bucket_name:
+            logger.error(
+                "[SQS ERROR] Missing required fields. file_id=%s bucket=%s file_name=%s body=%s",
+                file_id,
+                bucket_name,
+                file_name,
+                json.dumps(message_body),
+            )
+            if file_id:
+                _mark_file_status(file_id, "error")
+            continue
+
+        conn = None
+
+        try:
+            _mark_file_status(file_id, "processing")
+
+            logger.info("[S3] Fetching s3://%s/%s", bucket_name, file_name)
+            s3_object = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+            file_bytes = s3_object["Body"].read()
+
+            lower_name = file_name.lower()
+
+            if lower_name.endswith(".csv"):
+                file_type_tag = "CSV"
+                raw_txs = parse_csv(file_bytes)
+
+            elif lower_name.endswith(".pdf"):
+                file_type_tag = "PDF"
+                raw_txs = parse_pdf_via_ai(file_bytes)
+
+            else:
+                raise ValueError("Unsupported file type. Only CSV and text-based PDF are supported.")
+
+            logger.info("[PARSER] Extracted %d raw transaction(s) from %s", len(raw_txs), file_type_tag)
+
+            if not raw_txs:
+                raise ValueError("No transactions parsed from file.")
+
+            conn = psycopg2.connect(get_database_url())
+            cursor = conn.cursor()
+
+            _ensure_user(cursor, user_id)
+            _upsert_file(cursor, file_id, user_id, file_name, "processing")
+
+            threshold = float(os.environ.get("REVIEW_THRESHOLD", "0.60"))
+            upserted_count = 0
+
+            for tx in raw_txs:
+                description = str(tx.get("description") or "").strip()
+
+                if not description:
+                    description = "Unknown transaction"
+
+                tx["description"] = description
+                tx["amount"] = clean_amount(tx.get("amount"))
+                tx["time"] = parse_date_to_iso(tx.get("time"))
+
+                if not tx.get("bank_id"):
+                    tx["bank_id"] = _stable_bank_id(
+                        file_id,
+                        upserted_count,
+                        tx["time"],
+                        tx["description"],
+                        tx["amount"],
+                    )
+
+                category, confidence = get_category_by_keyword(description)
+
+                if not category:
+                    category, confidence = bedrock_few_shot_classify(description)
+
+                category = _normalize_category(category)
+                confidence = float(confidence or 0.4)
+
+                review_status = "ok" if confidence >= threshold else "review"
+
+                _insert_or_update_transaction(
+                    cursor=cursor,
+                    file_id=file_id,
+                    tx=tx,
+                    confidence=confidence,
+                    category=category,
+                    review_status=review_status,
+                )
+
+                upserted_count += 1
+
+            cursor.execute(
+                "UPDATE file SET status = 'done' WHERE file_id = %s",
+                (file_id,),
+            )
+
+            conn.commit()
+            cursor.close()
+
+            _invoke_budget_lambda(
+                file_id=file_id,
+                user_id=user_id,
+                records_processed=upserted_count,
+            )
+
+            processed += 1
+            total_upserted += upserted_count
+
+            logger.info(
+                "[SUCCESS] file_id=%s user_id=%s type=%s upserted=%d",
+                file_id,
+                user_id,
+                file_type_tag,
+                upserted_count,
+            )
+
+        except Exception as exc:
+            if conn:
+                conn.rollback()
+
+            _mark_file_status(file_id, "error")
+            logger.exception("[SYSTEM ERROR] Pipeline failed for file_id=%s: %s", file_id, exc)
+
+        finally:
+            if conn:
+                conn.close()
+
+    latency_ms = (time.time() - pipeline_start_time) * 1000
+    logger.info("[METRIC] Latency %.2f ms | Type=%s", latency_ms, file_type_tag)
+
+    _put_latency_metric(context, file_type_tag, latency_ms)
+
+    return {
+        "statusCode": 200,
+        "body": (
+            f"Pipeline finished. Records: {processed}, "
+            f"Total Upserted: {total_upserted}, "
+            f"Latency: {latency_ms:.2f}ms"
+        ),
+    }

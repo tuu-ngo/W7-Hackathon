@@ -24,11 +24,10 @@
 | **Live public URL (HTTPS)**       | `<https://xxxx.cloudfront.net>`                           |
 | API base URL                      | https://nvtank.dev                                        |
 | GitHub repository                 | https://github.com/tuu-ngo/BudgetBot-AWS                  |
-| Demo video                        | `docs/demo.mp4` or `<YouTube unlisted link>`              |
-| Slides                            | `docs/slides.pdf`                                         |
+| Demo video                        | https://drive.google.com/drive/folders/14nKVl-ITeyBxzbwg4mOk88aczTSFO7PR?usp=sharing              |
+| Slides                            | https://drive.google.com/drive/folders/1z4Kd6_oglxHVGfM6pCbjQ_ggvmTHaS8G?usp=sharing                                         |
 | Optional capability               | #8 and #10                                                |
 | **Total spend (Friday pre-demo)** | `$<X.XX>`                                                 |
-| Test account                      | `username: <demo>` / `password: <demo123>`                |
 
 
 ### Team Members
@@ -36,15 +35,15 @@
 
 | Name                    | Student ID  | Owned capabilities (Wed) |
 | ----------------------- | ----------- | ------------------------ |
-| Ngo Huu Tai             | XB-DN26-008 | Userstory Analyze, AWS Architecture Design, Backend Lambda Development, Database Integration, CICD pipeline(demo), Cost Optimization, Team Leadership, Documentation     |
+| Ngo Huu Tai             | XB-DN26-008 | Userstory Analyze, AWS Architecture Design, Backend Lambda Development, Database Integration and Deployment, CICD pipeline(demo), Cost Optimization, Team Leadership, Documentation     |
 | Mai Phuoc Khoa          | XB-DN26-033 | Frontend Development , MFA account Setup, Budget Setup, Anomality Cost Setup, Tag Attach                  |
 | Nguyen Tien Hoang Thinh | XB-DN26-047 | `<...>`                  |
-| Dang Thi Ngoc Thao      | XB-DN26-055 | `<...>`                  |
+| Dang Thi Ngoc Thao      | XB-DN26-055 | Parsing Lambda Logic, Full Observability Bonus, Database Config and Testing, Userstory Analyze, AWS Architecture Design                |
 | Nguyen Phu Trieu        | XB-DN26-070 | `<...>`                  |
-| Nguyen Hung Thinh       | XB-DN26-077 | `<...>`                  |
+| Nguyen Hung Thinh       | XB-DN26-077 | AI Lambda logic and deployment, Userstory Analyze, AWS Architecture Design                  |
 | Huynh Ba Huan           | XB-DN26-106 | `<...>`                  |
-| Nguyen Van Tuan Anh     | XB-DN26-112 | `<...>`                  |
-| Le Hoang Viet           | XB-DN26-134 | `<...>`                  |
+| Nguyen Van Tuan Anh     | XB-DN26-112 | Frontend Deployment, Cognito Setup, Frontend and Backend Connection, Userstory Analyze, AWS Architecture Design                  |
+| Le Hoang Viet           | XB-DN26-134 | Database Config and Testing, Security for AWS Services, IAM Setup                |
 | Hoang Cong Tri Dung     | XB-DN26-148 | `<...>`                  |
 
 
@@ -169,6 +168,51 @@ Lambda → CloudWatch → SNS
 IAM → Service permissions
 Security Group → Private network control
 KMS → Sensitive data encryption
+
+**LAMBDA PARSER PIPELINE**
+
+Asynchronous Data Flow Architecture
+To resolve the bottlenecks associated with processing large files and invoking high-latency AI models, the system implements a fully decoupled, asynchronous architecture:
+
+Upload & Trigger: Statement files are uploaded directly by the client to the budgetbot-statements-459983119471 bucket. Upon completion, S3 fires an s3:ObjectCreated:* event notification directly into an Amazon SQS queue.
+Decoupling (Shock Absorption): SQS acts as a durable buffer. This ensures the frontend user interface is never blocked waiting for a response, and the Lambda Parser only pulls messages when compute resources are available.
+
+![alt text](image-65.png)
+
+![alt text](image-66.png)
+
+![alt text](image-67.png)
+
+![alt text](image-68.png)
+
+![alt text](image-69.png)
+
+![alt text](image-70.png)
+
+![alt text](image-71.png)
+
+Parsing & Classification Strategy
+The Lambda Parser supports multi-format processing using a dual-path routing strategy to optimize both cost and performance:
+
+CSV Path (Deterministic): Utilizes the COLUMN_ALIASES mapping matrix to dynamically resolve inconsistent Vietnamese bank header variations (e.g., "ngày gd", "số tiền", "mã gd").
+PDF Path (AI Semantic Extraction): Utilizes pypdf to extract raw text, which is then passed to Amazon Bedrock (converse API) using the Llama 3.1 model. The system applies Few-Shot Prompting to strictly format the AI's output into a standardized JSON array containing time, description, amount, and transaction ID.
+AI Cost-Optimization (Dual-Layer): Before invoking the LLM, transactions pass through a KEYWORD_MAPPING pre-filter (e.g., "grab", "shopee"). If a match is found, the category is instantly assigned with a 1.0 confidence score, bypassing expensive LLM execution cycles entirely.
+
+![alt text](image-72.png)
+
+![alt text](image-73.png)
+
+Idempotency & Upsert Logic
+To prevent duplicate records and skewed financial budgets caused by users re-uploading the same statements, the system guarantees idempotent database writes:
+
+Natural Key Algorithm: If a native bank transaction ID is missing, the system generates a deterministic hash (_stable_bank_id) using a combination of the row index, description, time, and amount.
+PostgreSQL UPSERT: Data is persisted via RDS Proxy using the ON CONFLICT (file_id, bank_id) DO UPDATE command. This ensures that re-uploaded files strictly overwrite modified fields (like review_status) rather than inserting duplicate rows.
+
+![alt text](image-74.png)
+
+![alt text](image-75.png)
+
+![alt text](image-76.png)
 
 ### 3.2 Service decision table (7 mandatory capabilities)
 
@@ -442,8 +486,19 @@ S3 buckets used by the project have Block Public Access enabled. The frontend bu
 
 ## 6. Monitoring
 
-- **CloudWatch dashboard:** `<widgets included>`
-- **Alarm config:** `<metric, threshold, current state — must be OK or ALARM, not INSUFFICIENT_DATA>`
+- **CloudWatch dashboard:** 
+
+The CloudWatch dashboard includes monitoring widgets for the main backend Lambda functions and API activity. The dashboard tracks Lambda invocation count, error count, duration, and throttles. It is used to verify that the application is receiving requests, Lambda functions are running successfully, and backend errors can be detected during testing or demo.
+
+- **Alarm config:** 
+
+Metric: AWS/Lambda Errors
+Target resource: BudgetBot backend/API Lambda
+Threshold: Error count >= 1 within 5 minutes
+Evaluation period: 1 datapoint within 5 minutes
+Current state: OK
+Purpose: Notify or highlight when the backend Lambda produces runtime errors during API requests, file upload processing, or AI/chat request handling.
+
 - **Log Insights query (saved):**
 
 ```
@@ -452,6 +507,8 @@ fields @timestamp, @message
 | sort @timestamp desc
 | limit 50
 ```
+
+This query is saved in CloudWatch Logs Insights to quickly identify backend errors from Lambda log groups. It filters log events that contain ERROR, sorts them from newest to oldest, and limits the output to the latest 50 results. This helps the team debug Lambda failures, database connection issues, parsing errors, and unexpected backend exceptions.
 
 **Screenshots:** `docs/screenshots/18-cloudwatch-dashboard.png`, `docs/screenshots/19-cloudwatch-alarm-ok.png`, `docs/screenshots/20-log-insights-query-result.png`
 
@@ -522,8 +579,8 @@ TRADE-OFF ACCEPTED:
 
 | When            | Screenshot                                    | Total spend |
 | --------------- | --------------------------------------------- | ----------- |
-| Day 1 EOD (Wed) | `docs/screenshots/21-cost-day1-eod.png`       | $`<X.XX>`   |
-| Day 2 EOD (Thu) | `docs/screenshots/22-cost-day2-eod.png`       | $`<X.XX>`   |
+| Day 1 EOD (Wed) | `docs/screenshots/21-cost-day1-eod.png`       | $0   |
+| Day 2 EOD (Thu) | `docs/screenshots/22-cost-day2-eod.png`       | $0   |
 | Friday pre-demo | `docs/screenshots/23-cost-friday-predemo.png` | $`<X.XX>`   |
 
 
