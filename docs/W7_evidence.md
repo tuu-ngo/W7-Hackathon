@@ -587,13 +587,33 @@ TRADE-OFF ACCEPTED:
   double the instance cost (+$1.25). The saved $1.25 is redirected to Bedrock
   inference. If the database instance fails during the demo, we can restart it
   in ~3 minutes from the RDS console — acceptable for a live demo scenario.
+
+fields @timestamp, @message
+| filter @message like /ERROR/
+| sort @timestamp desc
+| limit 50
 ```
+
+This query is saved in CloudWatch Logs Insights to quickly identify backend errors from Lambda log groups. It filters log events that contain ERROR, sorts them from newest to oldest, and limits the output to the latest 50 results. This helps the team debug Lambda failures, database connection issues, parsing errors, and unexpected backend exceptions.
+
+![alt text](image-77.png)
+![alt text](image-78.png)
+=======
 
 ---
 
 ### DECISION 3 — Asynchronous S3 + SQS + Lambda Parser Architecture
 
-```
+
+DECISION: Use Amazon Bedrock Claude Haiku for transaction classification with a few-shot prompt containing 8 labeled examples. The model classifies each transaction into fixed categories: Food, Transport, Subscriptions, Bills, Shopping, Income, Transfer, and Unclassified. 
+
+ALTERNATIVES CONSIDERED: - Claude Sonnet — eliminated because: higher reasoning quality was not necessary for short bank transaction classification. Based on Bedrock/Claude pricing, Sonnet-class models are significantly more expensive than Haiku-class models for high-volume classification workloads. 
+For our test set, Sonnet improved only 2 rows out of 30 compared with Haiku, while the expected cost increase was not justified. 
+
+- Bedrock zero-shot classification — eliminated because: zero-shot classification reached 76.7% accuracy on our 30 labeled rows, but failed more often on unclear merchant strings and cryptic descriptions such as transfer codes, card payment references, and abbreviated merchant names. 
+
+- Rule-based keyword classification only — eliminated because: rule-based matching reached 70.0% accuracy on the same 30 labeled rows and could not reliably classify ambiguous descriptions such as "POS 0421", "CARD PAYMENT", or shortened merchant names.
+=======
 DECISION: Fully decoupled asynchronous pipeline for bank statement processing:
           Frontend → API Gateway → budgetbot-api Lambda → S3 PutObject → SQS SendMessage → Parser Lambda.
           Frontend returns immediately after file upload; parsing happens in background.
@@ -612,6 +632,7 @@ ALTERNATIVES CONSIDERED:
   hop and EventBridge pricing at $1/million events. SQS is purpose-built as a
   durable message buffer at $0.40/million messages — simpler, cheaper, and
   provides native dead-letter queue support for failed parsing jobs.
+
 
 MEASUREMENT:
 - Observed PDF parsing latency (Bedrock Llama 3.1 + pypdf): 3–8 seconds per file.
