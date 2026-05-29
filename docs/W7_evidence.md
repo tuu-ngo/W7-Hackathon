@@ -13,7 +13,7 @@
 > **API base URL:** `https://k2i1ih1613.execute-api.ap-southeast-1.amazonaws.com`  
 > **GitHub repository:** `https://github.com/tuu-ngo/W7-Hackathon`  
 > **Demo video:** [Google Drive Folder](https://drive.google.com/drive/folders/14nKVl-ITeyBxzbwg4mOk88aczTSFO7PR?usp=sharing)  
-> **Slides:** [Google Drive Folder](https://drive.google.com/drive/folders/1z4Kd6_oglxHVGfM6pCbjQ_ggvmTHaS8G?usp=sharing)  
+> **Slides:** [Google Drive Folder](https://www.canva.com/design/DAHK2EVaLpc/KguT0UFcQbWyQxsaNpSI7g/edit?ui=e30)  
 > **Total spend (Friday pre-demo):** ~$4.64
 
 ---
