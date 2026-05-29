@@ -22,8 +22,8 @@
 
 This report strictly utilizes the canonical screenshot mapping from G2's implementation. All 30 screenshots have been mapped to unique, descriptive filenames inside the `../evidence/images/` directory:
 
-| Canonical Image                | Description / Component Shown                                         | Source / Capture Note                                     | Status      |
-| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
+| Canonical Image                   | Description / Component Shown                                         | Source / Capture Note                                     | Status      |
+| --------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
 | `../evidence/images/image-1.png`  | Public frontend homepage loaded successfully over HTTPS               | `01_frontend_public_url.png`                              | 🟢 Verified |
 | `../evidence/images/image-2.png`  | CloudFront Custom Domain (Alternate domain `nvtank.dev`)              | CloudFront Distribution Settings                          | 🟢 Verified |
 | `../evidence/images/image-3.png`  | ACM SSL Certificate issued and validated for `nvtank.dev`             | ACM in `us-east-1` for CloudFront                         | 🟢 Verified |
@@ -640,21 +640,24 @@ TRADE-OFF ACCEPTED:
 
 ### 7.1 Pre-flight Safety
 
-| Safety Check                                                   | Status           | Evidence                       |
-| -------------------------------------------------------------- | ---------------- | ------------------------------ |
-| MFA on root                                                    | ✅ Confirmed     | `MFA enabled`                  |
+| Safety Check                                                   | Status           | Evidence                          |
+| -------------------------------------------------------------- | ---------------- | --------------------------------- |
+| MFA on root                                                    | ✅ Confirmed     | `MFA enabled`                     |
 | Budget Alert @ $80 + SNS email confirmed                       | ✅ Confirmed     | `../evidence/images/image-30.png` |
-| Cost Anomaly Detection enabled                                 | ✅ Confirmed     | `anomaly_detection_enabled`    |
-| Tags applied (`Project=W7Capstone`, `Team=G2`, `Owner=HuuTai`) | ✅ All 30 tagged | Section 8 — Tagging Evidence   |
-| Bedrock model access granted (`nova-micro`, `Llama 3.1`)       | ✅ Confirmed     | `bedrock_access_granted`       |
+| Cost Anomaly Detection enabled                                 | ✅ Confirmed     | `anomaly_detection_enabled`       |
+| Tags applied (`Project=W7Capstone`, `Team=G2`, `Owner=HuuTai`) | ✅ All 30 tagged | Section 8 — Tagging Evidence      |
+| Bedrock model access granted (`nova-micro`, `Llama 3.1`)       | ✅ Confirmed     | `bedrock_access_granted`          |
 
 ### 7.2 Three Required Cost Screenshots
 
-| When                       | Screenshot                     | Spend  |
-| -------------------------- | ------------------------------ | ------ |
-| Day 1 EOD (Wed 28/5)       | Pre-flight logs                | ~$0.00 |
-| Day 2 EOD (Thu 29/5)       | Pre-flight logs                | ~$0.00 |
+| When                       | Screenshot                        | Spend  |
+| -------------------------- | --------------------------------- | ------ |
+| Day 1 EOD (Wed 28/5)       | Pre-flight logs                   | ~$0.00 |
+| Day 2 EOD (Thu 29/5)       | Pre-flight logs                   | ~$0.00 |
 | Friday pre-demo (Fri 30/5) | `../evidence/images/image-30.png` | ~$4.64 |
+
+![Cost Explorer Friday Spend (image-76.png / image-30.png)](image-30.png)
+
 
 ### 7.3 Top-3 Cost Drivers
 
