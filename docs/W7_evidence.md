@@ -913,6 +913,8 @@ graph TD
 
 The Parser Lambda executes file parsing, transaction extraction, and LLM-based classification. Once transactions are successfully committed to RDS PostgreSQL, it asynchronously triggers the Budget Lambda, ensuring parser throughput is never blocked by alerting overhead.
 
+![Budget Lambda Architecture & Overview](Picture1.png)
+
 #### 3. Lambda Processing Logic
 
 The `budgetbot-budget-handler` executes the following sequence:
@@ -923,6 +925,10 @@ The `budgetbot-budget-handler` executes the following sequence:
 4. **Calculate Spending**: Runs sign-aware SQL grouping and aggregation queries to compute total monthly expenses, completely filtering out positive-value transactions (income, transfers) to prevent budget skewing.
 5. **Evaluate Thresholds**: Compares total spending against the monthly budget. If expenses exceed the threshold, computes usage metrics and parses month-over-month category performance.
 6. **Publish Alert**: Triggers an alert payload directly to the SNS Topic (`arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers`), firing an automated email warning to the user.
+
+![Manual Test Event Payload](Picture2.png)
+![PostgreSQL Connection & Query Execution Logic](Picture3.png)
+![Sign-Aware Expense Calculation Implementation](Picture4.png)
 
 #### 4. Event Schema & Execution Signatures
 
@@ -973,6 +979,10 @@ The `budgetbot-budget-handler` executes the following sequence:
 }
 ```
 
+![Psycopg2 PostgreSQL Lambda Layer Details](Picture10.png)
+![SNS Alert Email Dispatched Logs in CloudWatch](Picture11.png)
+![Alert Notification Received in Mailbox](Picture12.png)
+
 #### 5. Environment Parameter Configuration
 
 The Budget Lambda strictly avoids storing plain database connection strings. Parameter storage is abstracted via SSM SecureString:
@@ -981,6 +991,9 @@ The Budget Lambda strictly avoids storing plain database connection strings. Par
 | ------------------- | ------------------------------------------------------------- | ------------------------------------- |
 | `DB_URL_PARAM_NAME` | `/budgetbot/postgres_url`                                     | SSM parameter containing Postgres URL |
 | `SNS_TOPIC_ARN`     | `arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers` | Target SNS Topic for email alerts     |
+
+![SSM SecureString DB Connection Parameter](Picture5.png)
+![SSM SecureString Parameter Details](Picture6.png)
 
 #### 6. Scoped IAM Permissions
 
@@ -1012,6 +1025,10 @@ The execution role utilizes the least-privilege principle with specific resource
   ```
 - **VPC Execution Policy**:
   - `AWSLambdaVPCAccessExecutionRole`: Allows creation/management of ENIs inside private subnets to securely connect to RDS.
+
+![IAM Execution Role & Policies Overview](Picture7.png)
+![Customer Managed Decryption & Systems Manager Policy](Picture8.png)
+![SNS Publishing and Basic Execution Scopes](Picture9.png)
 
 ---
 
