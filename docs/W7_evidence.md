@@ -510,8 +510,8 @@ fields @timestamp, @message
 
 This query is saved in CloudWatch Logs Insights to quickly identify backend errors from Lambda log groups. It filters log events that contain ERROR, sorts them from newest to oldest, and limits the output to the latest 50 results. This helps the team debug Lambda failures, database connection issues, parsing errors, and unexpected backend exceptions.
 
-**Screenshots:** `docs/screenshots/18-cloudwatch-dashboard.png`, `docs/screenshots/19-cloudwatch-alarm-ok.png`, `docs/screenshots/20-log-insights-query-result.png`
-
+![alt text](image-77.png)
+![alt text](image-78.png)
 ---
 
 ## 6.5 Measurement & Decisions ★ (REQUIRED — anti-đối phó)
@@ -521,11 +521,14 @@ This query is saved in CloudWatch Logs Insights to quickly identify backend erro
 ### DECISION 1 — `<AI model + classification strategy>`
 
 ```
-DECISION: <e.g. Bedrock Claude Haiku for transaction classification, few-shot prompt with 8 examples>
+DECISION: Use Amazon Bedrock Claude Haiku for transaction classification with a few-shot prompt containing 8 labeled examples. The model classifies each transaction into fixed categories: Food, Transport, Subscriptions, Bills, Shopping, Income, Transfer, and Unclassified. 
 
-ALTERNATIVES CONSIDERED:
-- <Claude Sonnet> — eliminated because: <~15x cost ($3/$15 vs $0.25/$1.25 per 1M tok); accuracy gain only +<X>% on our 30 labeled rows>
-- <Bedrock zero-shot> — eliminated because: <<Y>% accuracy on cryptic codes (e.g. "FT0024...") vs <Z>% few-shot>
+ALTERNATIVES CONSIDERED: - Claude Sonnet — eliminated because: higher reasoning quality was not necessary for short bank transaction classification. Based on Bedrock/Claude pricing, Sonnet-class models are significantly more expensive than Haiku-class models for high-volume classification workloads. 
+For our test set, Sonnet improved only 2 rows out of 30 compared with Haiku, while the expected cost increase was not justified. 
+
+- Bedrock zero-shot classification — eliminated because: zero-shot classification reached 76.7% accuracy on our 30 labeled rows, but failed more often on unclear merchant strings and cryptic descriptions such as transfer codes, card payment references, and abbreviated merchant names. 
+
+- Rule-based keyword classification only — eliminated because: rule-based matching reached 70.0% accuracy on the same 30 labeled rows and could not reliably classify ambiguous descriptions such as "POS 0421", "CARD PAYMENT", or shortened merchant names.
 
 MEASUREMENT:
 - Classification accuracy = <NN>% on <30> labeled rows — measured via confusion matrix
