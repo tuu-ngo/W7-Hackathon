@@ -301,21 +301,27 @@ The `build_ai_context` function assembles a sanitized facts block before the Bed
 <summary>💬 Expand to view all 6 AI Chatbot Conversation Screenshots</summary>
 
 ##### 1. Monthly Spending Summary
+
 ![Monthly Spending Summary](AI_chat_Image1.png)
 
 ##### 2. Category Breakdown
+
 ![Category Breakdown](AI_chat_Image2.png)
 
 ##### 3. Budget Cap Check
+
 ![Budget Cap Check](AI_chat_Image3.png)
 
 ##### 4. Merchant History
+
 ![Merchant History](AI_chat_Image4.png)
 
 ##### 5. Savings Recommendation
+
 ![Savings Recommendation](AI_chat_Image5.png)
 
 ##### 6. Cross-month Comparison
+
 ![Cross-month Comparison](AI_chat_Image6.png)
 
 </details>
@@ -620,28 +626,14 @@ fields @timestamp, @message
 This query is saved in CloudWatch Logs Insights to quickly identify backend errors from Lambda log groups. It filters log events that contain ERROR, sorts them from newest to oldest, and limits the output to the latest 50 results. This helps the team debug Lambda failures, database connection issues, parsing errors, and unexpected backend exceptions.
 
 ![alt text](image-77.png)
-![alt text](image-78.png)
-=======
-
----
-
 ### DECISION 3 — Asynchronous S3 + SQS + Lambda Parser Architecture
 
-
-DECISION: Use Amazon Bedrock Claude Haiku for transaction classification with a few-shot prompt containing 8 labeled examples. The model classifies each transaction into fixed categories: Food, Transport, Subscriptions, Bills, Shopping, Income, Transfer, and Unclassified. 
-
-ALTERNATIVES CONSIDERED: - Claude Sonnet — eliminated because: higher reasoning quality was not necessary for short bank transaction classification. Based on Bedrock/Claude pricing, Sonnet-class models are significantly more expensive than Haiku-class models for high-volume classification workloads. 
-For our test set, Sonnet improved only 2 rows out of 30 compared with Haiku, while the expected cost increase was not justified. 
-
-- Bedrock zero-shot classification — eliminated because: zero-shot classification reached 76.7% accuracy on our 30 labeled rows, but failed more often on unclear merchant strings and cryptic descriptions such as transfer codes, card payment references, and abbreviated merchant names. 
-
-- Rule-based keyword classification only — eliminated because: rule-based matching reached 70.0% accuracy on the same 30 labeled rows and could not reliably classify ambiguous descriptions such as "POS 0421", "CARD PAYMENT", or shortened merchant names.
-=======
 DECISION: Fully decoupled asynchronous pipeline for bank statement processing:
           Frontend → API Gateway → budgetbot-api Lambda → S3 PutObject → SQS SendMessage → Parser Lambda.
           Frontend returns immediately after file upload; parsing happens in background.
 
 ALTERNATIVES CONSIDERED:
+
 - Synchronous API Gateway → Lambda direct parse — eliminated because: PDF parsing
   with Bedrock (Llama 3.1) takes 3–8 seconds. API Gateway has a hard 29-second
   integration timeout. Large PDFs or high-latency Bedrock responses would exceed
@@ -656,8 +648,8 @@ ALTERNATIVES CONSIDERED:
   durable message buffer at $0.40/million messages — simpler, cheaper, and
   provides native dead-letter queue support for failed parsing jobs.
 
-
 MEASUREMENT:
+
 - Observed PDF parsing latency (Bedrock Llama 3.1 + pypdf): 3–8 seconds per file.
 - API Gateway hard timeout: 29 seconds → sync approach fails for 15+ page PDFs.
 - SQS cost for 2000 parsing jobs: $0.0008 (negligible).
@@ -666,17 +658,20 @@ MEASUREMENT:
 - Parser success rate on test files: 5/5 CSV + 5/5 PDF in testing.
 
 EVIDENCE:
+
 - evidence/images/image-13.png — SQS file queue configuration.
 - evidence/images/image-14.png — SQS Trigger attached to Parser Lambda.
 
 TRADE-OFF ACCEPTED:
+
 - Async design means the user cannot see parsed transactions immediately after
   upload — they must wait for the background parser to complete and refresh.
   This UX tradeoff (polling vs. real-time) is accepted because: (1) it eliminates
   ALL timeout risk, (2) it allows the parser to handle any file size, (3) it
   decouples system load spikes so the frontend is never blocked. For production,
   WebSocket or Server-Sent Events would provide real-time status updates.
-```
+
+````
 
 ---
 
@@ -758,7 +753,7 @@ All 30 AWS resources in the BudgetBot project have been tagged with the required
 | `Owner`       | `HuuTai`     |
 | `Environment` | `Hackathon`  |
 
-**Verification date:** 2026-05-29  
+**Verification date:** 2026-05-29
 **Status:** 🟢 **100% COMPLETE — All 30 resources verified**
 
 ### Complete Resource List (30 ARNs)
@@ -796,7 +791,7 @@ All 30 AWS resources in the BudgetBot project have been tagged with the required
   "arn:aws:rds:ap-southeast-1:459983119471:db:budgetbot-db",
   "arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers"
 ]
-```
+````
 
 ### 8.1 Regional Resources — CLI Evidence
 
@@ -888,15 +883,15 @@ The `budgetbot-budget-handler` Lambda functions as the post-processing engine in
 
 #### 1. Core Profile
 
-| Item | Value |
-|---|---|
-| **Lambda Name** | `budgetbot-budget-handler` |
-| **Handler** | `lambda_function_budget.lambda_handler` |
-| **Runtime** | Python 3.11 with compatible Lambda Layer |
-| **Database** | Amazon RDS PostgreSQL |
-| **Secret Storage** | AWS Systems Manager Parameter Store (SecureString) |
-| **Notification Service** | Amazon SNS (Email) |
-| **Logging Service** | Amazon CloudWatch Logs |
+| Item                     | Value                                              |
+| ------------------------ | -------------------------------------------------- |
+| **Lambda Name**          | `budgetbot-budget-handler`                         |
+| **Handler**              | `lambda_function_budget.lambda_handler`            |
+| **Runtime**              | Python 3.11 with compatible Lambda Layer           |
+| **Database**             | Amazon RDS PostgreSQL                              |
+| **Secret Storage**       | AWS Systems Manager Parameter Store (SecureString) |
+| **Notification Service** | Amazon SNS (Email)                                 |
+| **Logging Service**      | Amazon CloudWatch Logs                             |
 
 #### 2. Position in the System Architecture
 
@@ -932,6 +927,7 @@ The `budgetbot-budget-handler` executes the following sequence:
 #### 4. Event Schema & Execution Signatures
 
 ##### Inbound Event Payload (Parser Lambda → Budget Lambda Async Trigger)
+
 ```json
 {
   "user_id": "00000000-0000-0000-0000-000000000001",
@@ -940,6 +936,7 @@ The `budgetbot-budget-handler` executes the following sequence:
 ```
 
 ##### Outbound Successful Execution Payload (No Alert Sent)
+
 ```json
 {
   "statusCode": 200,
@@ -948,8 +945,8 @@ The `budgetbot-budget-handler` executes the following sequence:
     "message": "Budget validation completed.",
     "user_id": "00000000-0000-0000-0000-000000000001",
     "financial_summary": {
-      "total_budget": 5000.00,
-      "total_spent": 3420.50,
+      "total_budget": 5000.0,
+      "total_spent": 3420.5,
       "usage_percent": 68.41
     },
     "alert_sent": false
@@ -958,6 +955,7 @@ The `budgetbot-budget-handler` executes the following sequence:
 ```
 
 ##### Outbound Successful Execution Payload (Alert Sent)
+
 ```json
 {
   "statusCode": 200,
@@ -966,8 +964,8 @@ The `budgetbot-budget-handler` executes the following sequence:
     "message": "Budget threshold exceeded. Email alert dispatched.",
     "user_id": "00000000-0000-0000-0000-000000000001",
     "financial_summary": {
-      "total_budget": 5000.00,
-      "total_spent": 5210.80,
+      "total_budget": 5000.0,
+      "total_spent": 5210.8,
       "usage_percent": 104.22
     },
     "alert_sent": true
@@ -979,10 +977,10 @@ The `budgetbot-budget-handler` executes the following sequence:
 
 The Budget Lambda strictly avoids storing plain database connection strings. Parameter storage is abstracted via SSM SecureString:
 
-| Key | Example Value | Purpose |
-|---|---|---|
-| `DB_URL_PARAM_NAME` | `/budgetbot/postgres_url` | SSM parameter containing Postgres URL |
-| `SNS_TOPIC_ARN` | `arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers` | Target SNS Topic for email alerts |
+| Key                 | Example Value                                                 | Purpose                               |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------- |
+| `DB_URL_PARAM_NAME` | `/budgetbot/postgres_url`                                     | SSM parameter containing Postgres URL |
+| `SNS_TOPIC_ARN`     | `arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers` | Target SNS Topic for email alerts     |
 
 #### 6. Scoped IAM Permissions
 
@@ -1016,7 +1014,6 @@ The execution role utilizes the least-privilege principle with specific resource
   - `AWSLambdaVPCAccessExecutionRole`: Allows creation/management of ENIs inside private subnets to securely connect to RDS.
 
 ---
-
 
 ## 10. CI/CD Pipeline (Bonus Path B — TO BE COMPLETED)
 
@@ -1069,7 +1066,7 @@ Target: All resources deleted by **Sunday 1 June EOD**. Commit teardown screensh
 - **Test account URL:** `https://nvtank.dev`
 - **Sample CSV input:** `docs/sample_input/sample_transactions.csv`
 - **Sample PDF input:** `docs/sample_input/sample_transactions.pdf`
-- **Demo Script & Backup Video:** Available in Google Drive folder.
+- **Demo Script & Backup Video:** Available on [YouTube](https://youtu.be/opciUQY0ZfA) and [Canva Slides](https://canva.link/1fv05agon7hxdwo).
 
 ### Lessons Learned
 
