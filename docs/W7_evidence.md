@@ -13,8 +13,13 @@
 > **API base URL:** `https://k2i1ih1613.execute-api.ap-southeast-1.amazonaws.com`  
 > **GitHub repository:** `https://github.com/tuu-ngo/W7-Hackathon`  
 > **Demo video:** [Google Drive Folder](https://drive.google.com/drive/folders/14nKVl-ITeyBxzbwg4mOk88aczTSFO7PR?usp=sharing)  
+<<<<<<< HEAD
 > **Slides:** [Google Drive Folder](https://drive.google.com/drive/folders/1z4Kd6_oglxHVGfM6pCbjQ_ggvmTHaS8G?usp=sharing)  
 > **Total spend (Friday pre-demo):** ~$4.64
+=======
+> **Slides:** [Google Drive Folder](https://www.canva.com/design/DAHK2EVaLpc/KguT0UFcQbWyQxsaNpSI7g/edit?ui=e30)  
+> **Total spend (Friday pre-demo):** ~$1.72
+>>>>>>> 37215ce (docs: update pre-demo cost documentation and replace corresponding image evidence)
 
 ---
 
@@ -80,7 +85,11 @@ This report strictly utilizes the canonical screenshot mapping from G2's impleme
 
 ### 1.3 Pre-demo Cost
 
+<<<<<<< HEAD
 ![Pre-demo cost](evidence/images/image-30.png)
+=======
+![Pre-demo cost](../evidence/images/image-85.png)
+>>>>>>> 37215ce (docs: update pre-demo cost documentation and replace corresponding image evidence)
 
 ---
 
@@ -632,6 +641,10 @@ TRADE-OFF ACCEPTED:
   ALL timeout risk, (2) it allows the parser to handle any file size, (3) it
   decouples system load spikes so the frontend is never blocked. For production,
   WebSocket or Server-Sent Events would provide real-time status updates.
+<<<<<<< HEAD
+=======
+
+>>>>>>> 37215ce (docs: update pre-demo cost documentation and replace corresponding image evidence)
 ```
 
 ---
@@ -650,11 +663,22 @@ TRADE-OFF ACCEPTED:
 
 ### 7.2 Three Required Cost Screenshots
 
+<<<<<<< HEAD
 | When                       | Screenshot                     | Spend  |
 | -------------------------- | ------------------------------ | ------ |
 | Day 1 EOD (Wed 28/5)       | Pre-flight logs                | ~$0.00 |
 | Day 2 EOD (Thu 29/5)       | Pre-flight logs                | ~$0.00 |
 | Friday pre-demo (Fri 30/5) | `evidence/images/image-30.png` | ~$4.64 |
+=======
+| When                       | Screenshot                        | Spend  |
+| -------------------------- | --------------------------------- | ------ |
+| Day 1 EOD (Wed 28/5)       | Pre-flight logs                   | ~$0.00 |
+| Day 2 EOD (Thu 29/5)       | Pre-flight logs                   | ~$0.00 |
+| Friday pre-demo (Fri 29/5) | `../evidence/images/image-85.png` | ~$1.72 |
+
+![Cost Explorer Friday Spend (image-85.png)](../evidence/images/image-85.png)
+
+>>>>>>> 37215ce (docs: update pre-demo cost documentation and replace corresponding image evidence)
 
 ### 7.3 Top-3 Cost Drivers
 
