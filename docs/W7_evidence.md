@@ -12,8 +12,8 @@
 > **CloudFront fallback URL:** `https://d2ydgy93m4rrer.cloudfront.net/`  
 > **API base URL:** `https://k2i1ih1613.execute-api.ap-southeast-1.amazonaws.com`  
 > **GitHub repository:** `https://github.com/tuu-ngo/W7-Hackathon`  
-> **Demo video:** [Google Drive Folder](https://drive.google.com/drive/folders/14nKVl-ITeyBxzbwg4mOk88aczTSFO7PR?usp=sharing)  
-> **Slides:** [Google Drive Folder](https://drive.google.com/drive/folders/1z4Kd6_oglxHVGfM6pCbjQ_ggvmTHaS8G?usp=sharing)  
+> **Demo video:** [YouTube Video](https://youtu.be/opciUQY0ZfA)  
+> **Slides:** [Canva Slides](https://canva.link/1fv05agon7hxdwo)  
 > **Total spend (Friday pre-demo):** ~$4.64
 
 ---
@@ -1025,7 +1025,7 @@ Target: All resources deleted by **Sunday 1 June EOD**. Commit teardown screensh
 - **Test account URL:** `https://nvtank.dev`
 - **Sample CSV input:** `docs/sample_input/sample_transactions.csv`
 - **Sample PDF input:** `docs/sample_input/sample_transactions.pdf`
-- **Demo Script & Backup Video:** Available in Google Drive folder.
+- **Demo Script & Backup Video:** Available on [YouTube](https://youtu.be/opciUQY0ZfA) and [Canva Slides](https://canva.link/1fv05agon7hxdwo).
 
 ### Lessons Learned
 
