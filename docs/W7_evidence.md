@@ -329,6 +329,283 @@ ON transaction(file_id, bank_id);
 
 ---
 
+### #4.1 — BudgetBot Database Evidence (Detailed Schema)
+
+#### Database Overview
+
+The BudgetBot application uses **PostgreSQL** as the main relational database. The active database is named `budgetbot`. It stores users, uploaded statement files, parsed transactions, budget caps, and chat history. This database supports the FinTech domain of BudgetBot, where users upload bank statement files and ask AI-powered questions about their spending.
+
+Based on the database evidence, the PostgreSQL instance contains the following databases:
+
+| Database    | Role                        |
+| ----------- | --------------------------- |
+| `budgetbot` | **Main application database** |
+| `postgres`  | Default PostgreSQL database |
+| `rdsadmin`  | AWS RDS administration      |
+| `template0` | PostgreSQL template         |
+| `template1` | PostgreSQL template         |
+
+![alt text](image-84.png)
+
+#### List of Tables
+
+The `budgetbot` database contains **5 application tables** that represent the main data model:
+
+| Table          | Purpose                                          |
+| -------------- | ------------------------------------------------ |
+| `user`         | Stores user accounts and budget information      |
+| `file`         | Stores uploaded statement file metadata          |
+| `transaction`  | Stores parsed transaction records from files     |
+| `budget_cap`   | Stores category-level budget limits              |
+| `chat_history` | Stores user questions and AI-generated responses |
+
+#### Table Details
+
+##### `user` Table
+
+Stores BudgetBot user accounts. Each user can upload files, own transactions, set budget caps, and generate chat history.
+
+| Column     | Meaning                              |
+| ---------- | ------------------------------------ |
+| `user_id`  | Unique user identifier               |
+| `account`  | User account name                    |
+| `password` | User password or placeholder password |
+| `budget`   | User-level total budget value        |
+
+**Observed sample data:**
+
+```text
+user_id:  608ab3c3-dcae-59ad-a354-f7e1b62b3265
+account:  user_608ab3c3-dcae-59ad-a354-f7e1b62b3265
+password: dummy_password
+budget:   0
+
+user_id:  00000000-0000-0000-0000-000000000001
+account:  test-user-001
+password: default_password
+budget:   30000000
+```
+
+> **Security note:** The current evidence shows a `password` column. For production this should not store plaintext passwords — passwords should be hashed before storage, or authentication delegated to a managed service such as Amazon Cognito. For the W7 hackathon demo this can be treated as a test-user implementation, but the limitation is documented.
+
+##### `file` Table
+
+Stores metadata about uploaded statement files. It tracks which user uploaded a file, the file name/path, upload time, and processing status.
+
+| Column        | Meaning                              |
+| ------------- | ------------------------------------ |
+| `file_id`     | Unique file identifier               |
+| `user_id`     | Owner of the uploaded file           |
+| `file_name`   | Uploaded file name or S3 object path |
+| `time_upload` | Timestamp when the file was uploaded |
+| `status`      | Processing status of the file        |
+
+**Observed sample file names:**
+
+```text
+bank_statement_q2_2026.csv
+postgres_test_statement.csv
+smoke_test_5_rows.csv
+smoke_test_5_rows.pdf
+parser-test/smoke_test_5_rows.csv
+uploads/parser-flow-test-003/smoke_test_5_rows.csv
+uploads/parser-auto-test-004/smoke_test_5_rows.csv
+uploads/00000000-0000-0000-0000-000000000001/smoke_test_5_rows.csv
+uploads/00000000-0000-0000-0000-000000000001/thao_test - Copy.csv
+thao_test.pdf
+```
+
+Observed `status` values: `done`.
+
+**Relationships:** `user` 1 → many `file` records; `file` 1 → many `transaction` records (the `file_id` is referenced by the `transaction` table).
+
+##### `transaction` Table
+
+Stores parsed financial transactions from uploaded bank statements. This is the most important table for BudgetBot because it contains the user's spending data.
+
+| Column           | Meaning                                       |
+| ---------------- | --------------------------------------------- |
+| `transaction_id` | Unique transaction identifier                 |
+| `file_id`        | File that produced the transaction            |
+| `time`           | Transaction timestamp                         |
+| `description`    | Raw bank transaction description              |
+| `amount`         | Transaction amount                            |
+| `confident`      | Classification confidence value               |
+| `category`       | Transaction category                          |
+| `review_status`  | Whether the classification is accepted or needs review |
+| `bank_id`        | Bank-provided or generated transaction identifier |
+
+**Observed sample transactions:** Apple iCloud 200GB, Lotte Cinema, Steam game purchase, Highlands Coffee, Vietnam Airlines HAN-SGN, VNPT fiber, Netflix monthly subscription, Company Monthly Salary, Phuc Long Tea, Sawaco water bill, Grab Bike, KFC lunch, Shopee order, Momo top up, Freelance payment.
+
+**Observed categories:** Other, Entertainment, Food, Transport, Subscriptions, Shopping.
+
+**Observed review statuses:** `ok`, `review`.
+
+**Relationships:** `file` 1 → many `transaction` records; `user` 1 → many `transaction` records indirectly through `file`. Because the `transaction` table stores `file_id`, transactions can be traced back to the uploaded statement file and then to the user.
+
+##### `budget_cap` Table
+
+Stores category-level spending limits, allowing BudgetBot to compare actual spending against a defined cap.
+
+| Column       | Meaning                              |
+| ------------ | ------------------------------------ |
+| `cap_id`     | Unique budget cap identifier         |
+| `user_id`    | Owner of the budget cap              |
+| `category`   | Spending category                    |
+| `cap_amount` | Maximum budget amount for the category |
+| `created_at` | Time the budget cap was created      |
+
+**Observed sample data:**
+
+```text
+cap_id:     c31fbc3a-a030-4996-988e-da0c9c1a8a77
+user_id:    608ab3c3-dcae-59ad-a354-f7e1b62b3265
+category:   Food
+cap_amount: 2000000
+created_at: 2026-05-27 11:51:40.282226+00
+```
+
+**Use case:** The user sets a Food budget cap of `2,000,000`. BudgetBot calculates total Food spending from the `transaction` table. If actual Food spending exceeds `2,000,000`, the system warns the user.
+
+##### `chat_history` Table
+
+Stores the user's chat questions and the assistant's generated responses. This proves that BudgetBot persists AI interaction history instead of only returning temporary responses.
+
+| Column    | Meaning                          |
+| --------- | -------------------------------- |
+| `output`  | AI or local assistant response   |
+| `user_id` | User who asked the question      |
+| `input`   | User message                     |
+| `time`    | Time the chat message was created |
+
+**Observed sample inputs:** `How much did I spend on food`, `hi`, `hello`.
+
+**Observed sample output** (local AI response + spending snapshot):
+
+```text
+[Local AI — no Bedrock]
+Your message: 'How much did I spend on food'
+
+Spending snapshot:
+Other:         -2,745,000 (4 transactions)
+Utilities:     -1,250,000 (1 transactions)
+Shopping:        -850,000 (1 transactions)
+Subscriptions:   -600,000 (1 transactions)
+Entertainment:   -440,000 (2 transactions)
+Food:            -230,000 (2 transactions)
+Transport:        -45,000 (1 transactions)
+Income:       50,000,000 (2 transactions)
+```
+
+> **Security note:** The chat history may contain financial questions and user-specific financial summaries, so it is treated as sensitive data.
+
+#### Database Relationship Summary
+
+```text
+user
+ ├── file
+ │    └── transaction
+ ├── budget_cap
+ └── chat_history
+```
+
+| Relationship           | Type        | Explanation                                        |
+| ---------------------- | ----------- | -------------------------------------------------- |
+| `user` → `file`        | One-to-many | One user can upload many statement files           |
+| `file` → `transaction` | One-to-many | One uploaded file can generate many transaction rows |
+| `user` → `budget_cap`  | One-to-many | One user can define many category budget caps      |
+| `user` → `chat_history`| One-to-many | One user can have many chat records                |
+
+#### Example SQL Queries
+
+**View all tables:**
+
+```sql
+\dt
+```
+
+**View users:**
+
+```sql
+SELECT * FROM "user";
+```
+
+**View uploaded files:**
+
+```sql
+SELECT *
+FROM file
+ORDER BY time_upload DESC;
+```
+
+**View recent transactions:**
+
+```sql
+SELECT transaction_id, file_id, time, description, amount, confident, category, review_status, bank_id
+FROM "transaction"
+ORDER BY time DESC
+LIMIT 20;
+```
+
+**Total spending by category:**
+
+```sql
+SELECT
+    category,
+    SUM(amount) AS total_amount,
+    COUNT(*) AS transaction_count
+FROM "transaction"
+WHERE amount > 0
+GROUP BY category
+ORDER BY total_amount DESC;
+```
+
+> Note: In the current data, many spending rows appear as positive amounts. If the application later stores expenses as negative values, change the filter to `amount < 0`.
+
+**Food spending total:**
+
+```sql
+SELECT
+    category,
+    SUM(amount) AS total_food_spending,
+    COUNT(*) AS transaction_count
+FROM "transaction"
+WHERE category = 'Food';
+```
+
+**Check budget cap against actual spending:**
+
+```sql
+SELECT
+    bc.user_id,
+    bc.category,
+    bc.cap_amount,
+    COALESCE(SUM(t.amount), 0) AS actual_spending,
+    CASE
+        WHEN COALESCE(SUM(t.amount), 0) > bc.cap_amount THEN 'Exceeded'
+        ELSE 'Within budget'
+    END AS budget_status
+FROM budget_cap bc
+LEFT JOIN file f
+    ON f.user_id = bc.user_id
+LEFT JOIN "transaction" t
+    ON t.file_id = f.file_id
+   AND t.category = bc.category
+WHERE bc.category = 'Food'
+GROUP BY bc.user_id, bc.category, bc.cap_amount;
+```
+
+**View chat history:**
+
+```sql
+SELECT user_id, input, output, time
+FROM chat_history
+ORDER BY time DESC
+LIMIT 10;
+```
+
+---
+
 ### #5 — Object Storage (S3 — Block Public Access ON)
 
 #### Bucket 1: Frontend Static Assets
@@ -858,22 +1135,33 @@ DO UPDATE SET
 
 ---
 
-## 10. CI/CD Pipeline (Bonus Path B — TO BE COMPLETED)
+## 10. CI/CD Pipeline
 
-> **⚠️ This section is reserved for CI/CD pipeline evidence.**
-> The `budgetbot-cicd-demo` Lambda and `GitHubActionsDeployBudgetBotLambdaRole` IAM role are already deployed and tagged.
+To avoid impacting the live BudgetBot application, the team implemented a safe CI/CD demonstration using a separate Lambda function named budgetbot-cicd-demo. The production Lambda functions were not modified during this test.
 
-```
-Developer Push → GitHub main branch
-    ↓
-GitHub Actions Workflow (.github/workflows/deploy.yml)
-    ↓
-Assume IAM Role: GitHubActionsDeployBudgetBotLambdaRole
-    ↓
-aws lambda update-function-code → deploy to Lambda function
-    ↓
-Verify deployment (get-function-configuration)
-```
+The GitHub Actions workflow is triggered from the cicd-build-only branch. It checks out the repository, authenticates to AWS using OIDC, builds a Lambda deployment package, and updates only the budgetbot-cicd-demo function using aws lambda update-function-code.
+
+The successful workflow run, the updated Lambda Last modified timestamp, and the changed Lambda test response confirm that the CI/CD pipeline successfully deployed code from GitHub to AWS Lambda without affecting the production backend.
+
+**YML file**
+![alt text](image-80.png)
+
+**Github Actions**
+![alt text](image-79.png)
+
+**Modified Result**
+
+![alt text](image-81.png)
+
+**Demo run**
+- New output
+
+![alt text](image-82.png)
+
+*Folder Structure**
+![alt text](image-83.png)
+
+
 
 ---
 
