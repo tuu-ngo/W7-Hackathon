@@ -288,14 +288,37 @@ The `build_ai_context` function assembles a sanitized facts block before the Bed
 
 #### Supported Question Types
 
-| Question Type            | Example                          | AI Capability |
-| ------------------------ | -------------------------------- | ------------- |
-| Monthly spending summary | "What did I spend in May?"       | ✅ Reliable   |
-| Category breakdown       | "How much on food?"              | ✅ Reliable   |
-| Budget cap check         | "Am I over my food budget?"      | ✅ Reliable   |
-| Merchant history         | "Where did I shop last month?"   | ✅ Reliable   |
-| Savings recommendation   | "How can I save $1M?"            | ✅ Reliable   |
-| Cross-month comparison   | "Am I spending more than March?" | ✅ Reliable   |
+| Question Type            | Example                          | AI Capability | Screenshot Reference |
+| ------------------------ | -------------------------------- | ------------- | -------------------- |
+| Monthly spending summary | "What did I spend in May?"       | ✅ Reliable   | `AI_chat_Image1.png` |
+| Category breakdown       | "How much on food?"              | ✅ Reliable   | `AI_chat_Image2.png` |
+| Budget cap check         | "Am I over my food budget?"      | ✅ Reliable   | `AI_chat_Image3.png` |
+| Merchant history         | "Where did I shop last month?"   | ✅ Reliable   | `AI_chat_Image4.png` |
+| Savings recommendation   | "How can I save $1M?"            | ✅ Reliable   | `AI_chat_Image5.png` |
+| Cross-month comparison   | "Am I spending more than March?" | ✅ Reliable   | `AI_chat_Image6.png` |
+
+<details>
+<summary>💬 Expand to view all 6 AI Chatbot Conversation Screenshots</summary>
+
+##### 1. Monthly Spending Summary
+![Monthly Spending Summary](AI_chat_Image1.png)
+
+##### 2. Category Breakdown
+![Category Breakdown](AI_chat_Image2.png)
+
+##### 3. Budget Cap Check
+![Budget Cap Check](AI_chat_Image3.png)
+
+##### 4. Merchant History
+![Merchant History](AI_chat_Image4.png)
+
+##### 5. Savings Recommendation
+![Savings Recommendation](AI_chat_Image5.png)
+
+##### 6. Cross-month Comparison
+![Cross-month Comparison](AI_chat_Image6.png)
+
+</details>
 
 ---
 
