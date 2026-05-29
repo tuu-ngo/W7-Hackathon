@@ -838,7 +838,141 @@ DO UPDATE SET
 ![Parser DB Insertion Loop](image-75.png)
 ![Parser Success Log Outputs](image-76.png)
 
+### 9.4 Budget Validation & Alerting Pipeline (`budgetbot-budget-handler`)
+
+The `budgetbot-budget-handler` Lambda functions as the post-processing engine in the transaction pipeline, validating the user's spending data and issuing email alerts when necessary.
+
+#### 1. Core Profile
+
+| Item | Value |
+|---|---|
+| **Lambda Name** | `budgetbot-budget-handler` |
+| **Handler** | `lambda_function_budget.lambda_handler` |
+| **Runtime** | Python 3.11 with compatible Lambda Layer |
+| **Database** | Amazon RDS PostgreSQL |
+| **Secret Storage** | AWS Systems Manager Parameter Store (SecureString) |
+| **Notification Service** | Amazon SNS (Email) |
+| **Logging Service** | Amazon CloudWatch Logs |
+
+#### 2. Position in the System Architecture
+
+The Budget Lambda operates at the final stage of the decoupled transaction processing pipeline:
+
+```mermaid
+graph TD
+    User([User]) -->|1. Upload CSV/PDF| APIGW[API Gateway]
+    APIGW -->|2. Route Upload| ApiLambda[budgetbot-api Lambda]
+    ApiLambda -->|3. Store File| S3[Amazon S3 statements-bucket]
+    ApiLambda -->|4. Send Msg| SQS[Amazon SQS budgetbot-file-queue]
+    SQS -->|5. Trigger Parser| Parser[BudgetBot_Parser_Lambda]
+    Parser -->|6. Store Transactions| RDS[(Amazon RDS PostgreSQL)]
+    Parser -->|7. Async Trigger| BudgetLambda[budgetbot-budget-handler]
+    BudgetLambda -->|8. Query Spending| RDS
+    BudgetLambda -->|9. Threshold Exceeded| SNS[Amazon SNS sns-budget-handlers]
+    SNS -->|10. Send Email Alert| User
+```
+
+The Parser Lambda executes file parsing, transaction extraction, and LLM-based classification. Once transactions are successfully committed to RDS PostgreSQL, it asynchronously triggers the Budget Lambda, ensuring parser throughput is never blocked by alerting overhead.
+
+#### 3. Lambda Processing Logic
+
+The `budgetbot-budget-handler` executes the following sequence:
+
+1. **Retrieve Secret**: Securely pulls the connection parameter `/budgetbot/postgres_url` from Systems Manager (SSM) Parameter Store using decrypted retrieval (`WithDecryption=True`).
+2. **Establish DB Connection**: Resolves the endpoint and authenticates securely to RDS PostgreSQL via `psycopg2` (provided by a reusable PostgreSQL Lambda Layer).
+3. **Fetch Configured Budget**: Reads the monthly category limits and global threshold for the corresponding `user_id` from the `user` table.
+4. **Calculate Spending**: Runs sign-aware SQL grouping and aggregation queries to compute total monthly expenses, completely filtering out positive-value transactions (income, transfers) to prevent budget skewing.
+5. **Evaluate Thresholds**: Compares total spending against the monthly budget. If expenses exceed the threshold, computes usage metrics and parses month-over-month category performance.
+6. **Publish Alert**: Triggers an alert payload directly to the SNS Topic (`arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers`), firing an automated email warning to the user.
+
+#### 4. Event Schema & Execution Signatures
+
+##### Inbound Event Payload (Parser Lambda → Budget Lambda Async Trigger)
+```json
+{
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "file_id": "test"
+}
+```
+
+##### Outbound Successful Execution Payload (No Alert Sent)
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "status": "success",
+    "message": "Budget validation completed.",
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "financial_summary": {
+      "total_budget": 5000.00,
+      "total_spent": 3420.50,
+      "usage_percent": 68.41
+    },
+    "alert_sent": false
+  }
+}
+```
+
+##### Outbound Successful Execution Payload (Alert Sent)
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "status": "success",
+    "message": "Budget threshold exceeded. Email alert dispatched.",
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "financial_summary": {
+      "total_budget": 5000.00,
+      "total_spent": 5210.80,
+      "usage_percent": 104.22
+    },
+    "alert_sent": true
+  }
+}
+```
+
+#### 5. Environment Parameter Configuration
+
+The Budget Lambda strictly avoids storing plain database connection strings. Parameter storage is abstracted via SSM SecureString:
+
+| Key | Example Value | Purpose |
+|---|---|---|
+| `DB_URL_PARAM_NAME` | `/budgetbot/postgres_url` | SSM parameter containing Postgres URL |
+| `SNS_TOPIC_ARN` | `arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers` | Target SNS Topic for email alerts |
+
+#### 6. Scoped IAM Permissions
+
+The execution role utilizes the least-privilege principle with specific resource constraint actions:
+
+- **Systems Manager (SSM) access**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "ssm:GetParameter",
+    "Resource": "arn:aws:ssm:ap-southeast-1:459983119471:parameter/budgetbot/postgres_url"
+  }
+  ```
+- **Key Management Service (KMS) decryption**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "kms:Decrypt",
+    "Resource": "arn:aws:kms:ap-southeast-1:459983119471:key/b0b19ec3-cf84-430c-a736-3c5695fdec85"
+  }
+  ```
+- **Simple Notification Service (SNS) publishing**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "sns:Publish",
+    "Resource": "arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers"
+  }
+  ```
+- **VPC Execution Policy**:
+  - `AWSLambdaVPCAccessExecutionRole`: Allows creation/management of ENIs inside private subnets to securely connect to RDS.
+
 ---
+
 
 ## 10. CI/CD Pipeline (Bonus Path B — TO BE COMPLETED)
 
