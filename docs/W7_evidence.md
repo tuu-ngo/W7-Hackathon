@@ -12,48 +12,48 @@
 > **CloudFront fallback URL:** `https://d2ydgy93m4rrer.cloudfront.net/`  
 > **API base URL:** `https://k2i1ih1613.execute-api.ap-southeast-1.amazonaws.com`  
 > **GitHub repository:** `https://github.com/tuu-ngo/W7-Hackathon`  
-> **Demo video:** [Google Drive Folder](https://drive.google.com/drive/folders/14nKVl-ITeyBxzbwg4mOk88aczTSFO7PR?usp=sharing)  
-> **Slides:** [Google Drive Folder](https://drive.google.com/drive/folders/1z4Kd6_oglxHVGfM6pCbjQ_ggvmTHaS8G?usp=sharing)  
+> **Demo video:** [YouTube Video](https://youtu.be/opciUQY0ZfA)  
+> **Slides:** [Canva Slides](https://canva.link/1fv05agon7hxdwo)  
 > **Total spend (Friday pre-demo):** ~$4.64
 
 ---
 
 ## 0. Evidence Image Naming Rule
 
-This report strictly utilizes the canonical screenshot mapping from G2's implementation. All 30 screenshots have been mapped to unique, descriptive filenames inside the `evidence/images/` directory:
+This report strictly utilizes the canonical screenshot mapping from G2's implementation. All 30 screenshots have been mapped to unique, descriptive filenames inside the `../evidence/images/` directory:
 
-| Canonical Image                | Description / Component Shown                                         | Source / Capture Note                                     | Status      |
-| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
-| `evidence/images/image-1.png`  | Public frontend homepage loaded successfully over HTTPS               | `01_frontend_public_url.png`                              | 🟢 Verified |
-| `evidence/images/image-2.png`  | CloudFront Custom Domain (Alternate domain `nvtank.dev`)              | CloudFront Distribution Settings                          | 🟢 Verified |
-| `evidence/images/image-3.png`  | ACM SSL Certificate issued and validated for `nvtank.dev`             | ACM in `us-east-1` for CloudFront                         | 🟢 Verified |
-| `evidence/images/image-4.png`  | DNS record (Route 53 CNAME/A record pointing to CloudFront)           | DNS Zone Manager                                          | 🟢 Verified |
-| `evidence/images/image-5.png`  | `budgetbot-api` Lambda overview with API Gateway trigger              | `02_lambda_api_overview.png`                              | 🟢 Verified |
-| `evidence/images/image-6.png`  | Cognito user pool settings, callback, and logout URLs                 | `03_cognito_user_pool.png`                                | 🟢 Verified |
-| `evidence/images/image-7.png`  | Frontend logged-in user session displaying Cognito sub/email          | `05_frontend_logged_in_user.png`                          | 🟢 Verified |
-| `evidence/images/image-8.png`  | Multi-user database separation evidence (scoped queries)              | `06_db_user_separation.png`                               | 🟢 Verified |
-| `evidence/images/image-9.png`  | Upload page UI in the live web application                            | `07_frontend_upload_page.png`                             | 🟢 Verified |
-| `evidence/images/image-10.png` | PDF Upload API response (`status=pending`, `file_id`, S3 Key)         | `08_pdf_upload_api_response.png`                          | 🟢 Verified |
-| `evidence/images/image-11.png` | Database status showing PDF parsing marked `done`                     | `09_pdf_upload_done_db.png`                               | 🟢 Verified |
-| `evidence/images/image-12.png` | Uploaded PDF object stored under the user prefix in S3                | `10_s3_uploaded_pdf_object.png`                           | 🟢 Verified |
-| `evidence/images/image-13.png` | Amazon SQS queue (`budgetbot-file-queue`) configurations              | `sqs_queue_config.png`                                    | 🟢 Verified |
-| `evidence/images/image-14.png` | Parser Lambda SQS event source mapping trigger enabled                | `parser_sqs_trigger.png`                                  | 🟢 Verified |
-| `evidence/images/image-15.png` | Parser successful processing logs in CloudWatch                       | `11_parser_pdf_success_logs.png`                          | 🟢 Verified |
-| `evidence/images/image-16.png` | Responses of API routes `/health`, `/summary`, and `/transactions`    | `15_api_health.png` + `16_api_summary.png`                | 🟢 Verified |
-| `evidence/images/image-17.png` | RDS PostgreSQL database structure and row counts                      | `12_rds_budgetbot_database.png` + `13_db_file_counts.png` | 🟢 Verified |
-| `evidence/images/image-18.png` | Unique constraint and transaction idempotency SQL index               | `14_db_transaction_unique_index.png`                      | 🟢 Verified |
-| `evidence/images/image-19.png` | Budget alarm triggered in UI and Lambda budget SNS logs               | `18_frontend_budget_alarm.png` + `20_sns_sent_logs.png`   | 🟢 Verified |
-| `evidence/images/image-20.png` | SNS topic (`sns-budget-handlers`) subscription configuration          | `21_sns_topic_subscription.png`                           | 🟢 Verified |
-| `evidence/images/image-21.png` | AI chat Lambda environment parameters and Bedrock runtime setup       | `22_lambda_ai_env_settings.png`                           | 🟢 Verified |
-| `evidence/images/image-22.png` | AI chat interface and JSON chat payload response from Bedrock         | `23_frontend_ai_chat.png`                                 | 🟢 Verified |
-| `evidence/images/image-23.png` | Lambda environment variables showing secure configuration (no DB URL) | `25_lambda_env_secure_no_db_url.png`                      | 🟢 Verified |
-| `evidence/images/image-24.png` | SSM Parameter Store SecureString database parameter                   | `26_ssm_securestring_postgres_url.png`                    | 🟢 Verified |
-| `evidence/images/image-25.png` | Scoped IAM execution role policies (named actions, no wildcards)      | `27_iam_api_role_policies.png`                            | 🟢 Verified |
-| `evidence/images/image-26.png` | KMS customer managed key (CMK) details and S3 encryption              | `29_kms_key.png`                                          | 🟢 Verified |
-| `evidence/images/image-27.png` | Lambda private VPC, private subnets, and security groups              | `parser_vpc_config.png`                                   | 🟢 Verified |
-| `evidence/images/image-28.png` | VPC endpoints (S3 Gateway, Bedrock, SSM, SQS, CloudWatch)             | `vpc_endpoints.png`                                       | 🟢 Verified |
-| `evidence/images/image-29.png` | CloudWatch Dashboard custom performance metric (`ParsingLatency`)     | `34_cloudwatch_parsing_latency_metric.png`                | 🟢 Verified |
-| `evidence/images/image-30.png` | Cost governance (Cost Explorer, $80 budget alert, anomaly config)     | `38_budget_alert_80_usd.png`                              | 🟢 Verified |
+| Canonical Image                   | Description / Component Shown                                         | Source / Capture Note                                     | Status      |
+| --------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------- | ----------- |
+| `../evidence/images/image-1.png`  | Public frontend homepage loaded successfully over HTTPS               | `01_frontend_public_url.png`                              | 🟢 Verified |
+| `../evidence/images/image-2.png`  | CloudFront Custom Domain (Alternate domain `nvtank.dev`)              | CloudFront Distribution Settings                          | 🟢 Verified |
+| `../evidence/images/image-3.png`  | ACM SSL Certificate issued and validated for `nvtank.dev`             | ACM in `us-east-1` for CloudFront                         | 🟢 Verified |
+| `../evidence/images/image-4.png`  | DNS record (Route 53 CNAME/A record pointing to CloudFront)           | DNS Zone Manager                                          | 🟢 Verified |
+| `../evidence/images/image-5.png`  | `budgetbot-api` Lambda overview with API Gateway trigger              | `02_lambda_api_overview.png`                              | 🟢 Verified |
+| `../evidence/images/image-6.png`  | Cognito user pool settings, callback, and logout URLs                 | `03_cognito_user_pool.png`                                | 🟢 Verified |
+| `../evidence/images/image-7.png`  | Frontend logged-in user session displaying Cognito sub/email          | `05_frontend_logged_in_user.png`                          | 🟢 Verified |
+| `../evidence/images/image-8.png`  | Multi-user database separation evidence (scoped queries)              | `06_db_user_separation.png`                               | 🟢 Verified |
+| `../evidence/images/image-9.png`  | Upload page UI in the live web application                            | `07_frontend_upload_page.png`                             | 🟢 Verified |
+| `../evidence/images/image-10.png` | PDF Upload API response (`status=pending`, `file_id`, S3 Key)         | `08_pdf_upload_api_response.png`                          | 🟢 Verified |
+| `../evidence/images/image-11.png` | Database status showing PDF parsing marked `done`                     | `09_pdf_upload_done_db.png`                               | 🟢 Verified |
+| `../evidence/images/image-12.png` | Uploaded PDF object stored under the user prefix in S3                | `10_s3_uploaded_pdf_object.png`                           | 🟢 Verified |
+| `../evidence/images/image-13.png` | Amazon SQS queue (`budgetbot-file-queue`) configurations              | `sqs_queue_config.png`                                    | 🟢 Verified |
+| `../evidence/images/image-14.png` | Parser Lambda SQS event source mapping trigger enabled                | `parser_sqs_trigger.png`                                  | 🟢 Verified |
+| `../evidence/images/image-15.png` | Parser successful processing logs in CloudWatch                       | `11_parser_pdf_success_logs.png`                          | 🟢 Verified |
+| `../evidence/images/image-16.png` | Responses of API routes `/health`, `/summary`, and `/transactions`    | `15_api_health.png` + `16_api_summary.png`                | 🟢 Verified |
+| `../evidence/images/image-17.png` | RDS PostgreSQL database structure and row counts                      | `12_rds_budgetbot_database.png` + `13_db_file_counts.png` | 🟢 Verified |
+| `../evidence/images/image-18.png` | Unique constraint and transaction idempotency SQL index               | `14_db_transaction_unique_index.png`                      | 🟢 Verified |
+| `../evidence/images/image-19.png` | Budget alarm triggered in UI and Lambda budget SNS logs               | `18_frontend_budget_alarm.png` + `20_sns_sent_logs.png`   | 🟢 Verified |
+| `../evidence/images/image-20.png` | SNS topic (`sns-budget-handlers`) subscription configuration          | `21_sns_topic_subscription.png`                           | 🟢 Verified |
+| `../evidence/images/image-21.png` | AI chat Lambda environment parameters and Bedrock runtime setup       | `22_lambda_ai_env_settings.png`                           | 🟢 Verified |
+| `../evidence/images/image-22.png` | AI chat interface and JSON chat payload response from Bedrock         | `23_frontend_ai_chat.png`                                 | 🟢 Verified |
+| `../evidence/images/image-23.png` | Lambda environment variables showing secure configuration (no DB URL) | `25_lambda_env_secure_no_db_url.png`                      | 🟢 Verified |
+| `../evidence/images/image-24.png` | SSM Parameter Store SecureString database parameter                   | `26_ssm_securestring_postgres_url.png`                    | 🟢 Verified |
+| `../evidence/images/image-25.png` | Scoped IAM execution role policies (named actions, no wildcards)      | `27_iam_api_role_policies.png`                            | 🟢 Verified |
+| `../evidence/images/image-26.png` | KMS customer managed key (CMK) details and S3 encryption              | `29_kms_key.png`                                          | 🟢 Verified |
+| `../evidence/images/image-27.png` | Lambda private VPC, private subnets, and security groups              | `parser_vpc_config.png`                                   | 🟢 Verified |
+| `../evidence/images/image-28.png` | VPC endpoints (S3 Gateway, Bedrock, SSM, SQS, CloudWatch)             | `vpc_endpoints.png`                                       | 🟢 Verified |
+| `../evidence/images/image-29.png` | CloudWatch Dashboard custom performance metric (`ParsingLatency`)     | `34_cloudwatch_parsing_latency_metric.png`                | 🟢 Verified |
+| `../evidence/images/image-30.png` | Cost governance (Cost Explorer, $80 budget alert, anomaly config)     | `38_budget_alert_80_usd.png`                              | 🟢 Verified |
 
 ---
 
@@ -76,11 +76,11 @@ This report strictly utilizes the canonical screenshot mapping from G2's impleme
 
 ### 1.2 Landing Page via HTTPS
 
-![Landing page](evidence/images/image-1.png)
+![Landing page](../evidence/images/image-1.png)
 
 ### 1.3 Pre-demo Cost
 
-![Pre-demo cost](evidence/images/image-30.png)
+![Pre-demo cost](../evidence/images/image-30.png)
 
 ---
 
@@ -143,8 +143,8 @@ This report strictly utilizes the canonical screenshot mapping from G2's impleme
   `User → Frontend → Cognito → JWT Token`
 - **API Flow:** The frontend sends requests to API Gateway. API Gateway invokes the Lambda API, which routes requests to specific Lambda functions such as Upload Parsing, Chat, or Budget.
   `Frontend → API Gateway → Lambda API → Functional Lambdas`
-- **Upload Processing Flow:** Bank statement files are uploaded to the S3 Upload Bucket. SQS triggers the asynchronous processing flow. The Upload Parsing Lambda reads the file, parses transaction data, and stores the records in the database.
-  `S3 Upload → SQS → Upload Parsing Lambda → RDS Proxy → RDS PostgreSQL`
+- **Upload Processing Flow:** Bank statement files are uploaded via the frontend through API Gateway to the `budgetbot-api` Lambda. The API Lambda stores the file in the S3 Upload Bucket and sends an SQS message to trigger the asynchronous parser pipeline. The SQS queue then triggers `BudgetBot_Parser_Lambda` which reads the file, parses transaction data, and stores records in RDS via RDS Proxy.
+  `Frontend → API Gateway → budgetbot-api Lambda → S3 PutObject → SQS SendMessage → Parser Lambda → RDS Proxy → RDS PostgreSQL`
 - **Database Flow:** Backend Lambda functions access the database through RDS Proxy. RDS Proxy manages connection pooling and reduces direct connection pressure on RDS.
   `Lambda Functions → RDS Proxy → RDS PostgreSQL`
 - **AI Chat Flow:** When the user asks a financial question, Chat Lambda retrieves transaction data from RDS and calls Amazon Bedrock to generate an AI response.
@@ -191,7 +191,7 @@ This report strictly utilizes the canonical screenshot mapping from G2's impleme
 - **URL:** `https://nvtank.dev` — loads in any browser, no SSL errors, under 5 seconds.
 - **CloudFront fallback URL:** `https://d2ydgy93m4rrer.cloudfront.net/`
 
-![Public URL HTTPS](evidence/images/image-1.png)
+![Public URL HTTPS](../evidence/images/image-1.png)
 
 The frontend is served through Amazon CloudFront (Distribution `E22MRM2Q81QULT`) using an ACM-managed TLS certificate (`image-3.png`). The S3 frontend bucket is not publicly accessible — CloudFront uses OAC (Origin Access Control) to fetch assets privately (`image-2.png`, `image-4.png`).
 
@@ -224,7 +224,7 @@ The system uses **five dedicated Lambda functions**, each with a separate IAM ex
 | POST   | `/budget/cap`   | budgetbot_chat_lambda → RDS budget caps                     |
 | POST   | `/budget/check` | budgetbot-budget-handler → RDS → SNS                        |
 
-![Lambda API overview](evidence/images/image-5.png)
+![Lambda API overview](../evidence/images/image-5.png)
 
 ---
 
@@ -245,7 +245,7 @@ The `budgetbot_chat_lambda` operates as a **controlled data pipeline**: the fact
 - AI confidence score is derived from Bedrock's response metadata (stop reason + token usage ratio), not hardcoded.
 - Language detection: the model replies in the same language as the user.
 
-![AI chatbot environment settings](evidence/images/image-21.png)
+![AI chatbot environment settings](../evidence/images/image-21.png)
 
 #### AI Chatbot Data Flow
 
@@ -264,7 +264,7 @@ Response → Privacy check → User-facing answer
 RDS: Save conversation history
 ```
 
-![AI chat live response](evidence/images/image-22.png)
+![AI chat live response](../evidence/images/image-22.png)
 
 #### Bedrock Model Invocation
 
@@ -288,14 +288,37 @@ The `build_ai_context` function assembles a sanitized facts block before the Bed
 
 #### Supported Question Types
 
-| Question Type            | Example                          | AI Capability |
-| ------------------------ | -------------------------------- | ------------- |
-| Monthly spending summary | "What did I spend in May?"       | ✅ Reliable   |
-| Category breakdown       | "How much on food?"              | ✅ Reliable   |
-| Budget cap check         | "Am I over my food budget?"      | ✅ Reliable   |
-| Merchant history         | "Where did I shop last month?"   | ✅ Reliable   |
-| Savings recommendation   | "How can I save $1M?"            | ✅ Reliable   |
-| Cross-month comparison   | "Am I spending more than March?" | ✅ Reliable   |
+| Question Type            | Example                          | AI Capability | Screenshot Reference |
+| ------------------------ | -------------------------------- | ------------- | -------------------- |
+| Monthly spending summary | "What did I spend in May?"       | ✅ Reliable   | `AI_chat_Image1.png` |
+| Category breakdown       | "How much on food?"              | ✅ Reliable   | `AI_chat_Image2.png` |
+| Budget cap check         | "Am I over my food budget?"      | ✅ Reliable   | `AI_chat_Image3.png` |
+| Merchant history         | "Where did I shop last month?"   | ✅ Reliable   | `AI_chat_Image4.png` |
+| Savings recommendation   | "How can I save $1M?"            | ✅ Reliable   | `AI_chat_Image5.png` |
+| Cross-month comparison   | "Am I spending more than March?" | ✅ Reliable   | `AI_chat_Image6.png` |
+
+<details>
+<summary>💬 Expand to view all 6 AI Chatbot Conversation Screenshots</summary>
+
+##### 1. Monthly Spending Summary
+![Monthly Spending Summary](AI_chat_Image1.png)
+
+##### 2. Category Breakdown
+![Category Breakdown](AI_chat_Image2.png)
+
+##### 3. Budget Cap Check
+![Budget Cap Check](AI_chat_Image3.png)
+
+##### 4. Merchant History
+![Merchant History](AI_chat_Image4.png)
+
+##### 5. Savings Recommendation
+![Savings Recommendation](AI_chat_Image5.png)
+
+##### 6. Cross-month Comparison
+![Cross-month Comparison](AI_chat_Image6.png)
+
+</details>
 
 ---
 
@@ -324,8 +347,8 @@ CREATE UNIQUE INDEX uq_transaction_file_bank_id
 ON transaction(file_id, bank_id);
 ```
 
-![Data persistence database counts](evidence/images/image-17.png)
-![Unique transaction index](evidence/images/image-18.png)
+![Data persistence database counts](../evidence/images/image-17.png)
+![Unique transaction index](../evidence/images/image-18.png)
 
 ---
 
@@ -349,7 +372,7 @@ ON transaction(file_id, bank_id);
 
 **Purpose:** Stores uploaded CSV/PDF bank statements organized by user prefix (`uploads/{user_id}/{file_id}.{ext}`). Financial data requires strict privacy — the bucket is private, accessible only by Lambda via IAM. Versioning preserves upload history for auditing and re-processing.
 
-![S3 Upload Object in S3](evidence/images/image-12.png)
+![S3 Upload Object in S3](../evidence/images/image-12.png)
 
 ---
 
@@ -368,8 +391,8 @@ The Amazon RDS PostgreSQL database (`budgetbot-db`) is deployed inside a **priva
 
 The inbound rule does **not** use `0.0.0.0/0` for database access. This follows least-privilege: only authorized application components can connect to the database on port 5432.
 
-![RDS private subnet SG](evidence/images/image-27.png)
-![VPC endpoint details](evidence/images/image-28.png)
+![RDS private subnet SG](../evidence/images/image-27.png)
+![VPC endpoint details](../evidence/images/image-28.png)
 
 ---
 
@@ -377,7 +400,7 @@ The inbound rule does **not** use `0.0.0.0/0` for database access. This follows 
 
 All Lambda execution roles follow least-privilege — named actions on specific ARNs, no `Action: "*"` or `AdministratorAccess`. IAM simulator confirmed S3 PutObject and SQS SendMessage are allowed; unrelated actions are denied.
 
-![IAM execution role details](evidence/images/image-25.png)
+![IAM execution role details](../evidence/images/image-25.png)
 
 ---
 
@@ -404,7 +427,7 @@ All Lambda execution roles follow least-privilege — named actions on specific 
   - SSM Parameter Store SecureString (`/budgetbot/postgres_url`)
   - Lambda environment variables at rest
 
-![KMS customer managed key details](evidence/images/image-26.png)
+![KMS customer managed key details](../evidence/images/image-26.png)
 
 ### 5.3 MFA on Root
 
@@ -431,8 +454,8 @@ Lambda environment verification (post-removal of plaintext secret):
 
 This confirms no raw database credentials exist in Lambda environment variables. All DB access goes through SSM SecureString encrypted with the KMS CMK.
 
-![Lambda env secure no DB URL](evidence/images/image-23.png)
-![SSM SecureString postgres URL](evidence/images/image-24.png)
+![Lambda env secure no DB URL](../evidence/images/image-23.png)
+![SSM SecureString postgres URL](../evidence/images/image-24.png)
 
 ---
 
@@ -481,7 +504,7 @@ Because the Parser Lambda is isolated inside a private VPC subnet (required for 
   - **Unit:** Milliseconds
   - **Purpose:** Benchmarking deterministic (CSV) vs. AI-driven (PDF) extraction performance.
 
-![CloudWatch Parsing Latency Metric](evidence/images/image-29.png)
+![CloudWatch Parsing Latency Metric](../evidence/images/image-29.png)
 
 ### 6.4 Saved Log Insights Query
 
@@ -595,7 +618,7 @@ TRADE-OFF ACCEPTED:
 
 ```
 DECISION: Fully decoupled asynchronous pipeline for bank statement processing:
-          S3 upload → S3 event notification → SQS queue → Parser Lambda (SQS trigger).
+          Frontend → API Gateway → budgetbot-api Lambda → S3 PutObject → SQS SendMessage → Parser Lambda.
           Frontend returns immediately after file upload; parsing happens in background.
 
 ALTERNATIVES CONSIDERED:
@@ -640,21 +663,24 @@ TRADE-OFF ACCEPTED:
 
 ### 7.1 Pre-flight Safety
 
-| Safety Check                                                   | Status           | Evidence                       |
-| -------------------------------------------------------------- | ---------------- | ------------------------------ |
-| MFA on root                                                    | ✅ Confirmed     | `MFA enabled`                  |
-| Budget Alert @ $80 + SNS email confirmed                       | ✅ Confirmed     | `evidence/images/image-30.png` |
-| Cost Anomaly Detection enabled                                 | ✅ Confirmed     | `anomaly_detection_enabled`    |
-| Tags applied (`Project=W7Capstone`, `Team=G2`, `Owner=HuuTai`) | ✅ All 30 tagged | Section 8 — Tagging Evidence   |
-| Bedrock model access granted (`nova-micro`, `Llama 3.1`)       | ✅ Confirmed     | `bedrock_access_granted`       |
+| Safety Check                                                   | Status           | Evidence                          |
+| -------------------------------------------------------------- | ---------------- | --------------------------------- |
+| MFA on root                                                    | ✅ Confirmed     | `MFA enabled`                     |
+| Budget Alert @ $80 + SNS email confirmed                       | ✅ Confirmed     | `../evidence/images/image-30.png` |
+| Cost Anomaly Detection enabled                                 | ✅ Confirmed     | `anomaly_detection_enabled`       |
+| Tags applied (`Project=W7Capstone`, `Team=G2`, `Owner=HuuTai`) | ✅ All 30 tagged | Section 8 — Tagging Evidence      |
+| Bedrock model access granted (`nova-micro`, `Llama 3.1`)       | ✅ Confirmed     | `bedrock_access_granted`          |
 
 ### 7.2 Three Required Cost Screenshots
 
-| When                       | Screenshot                     | Spend  |
-| -------------------------- | ------------------------------ | ------ |
-| Day 1 EOD (Wed 28/5)       | Pre-flight logs                | ~$0.00 |
-| Day 2 EOD (Thu 29/5)       | Pre-flight logs                | ~$0.00 |
-| Friday pre-demo (Fri 30/5) | `evidence/images/image-30.png` | ~$4.64 |
+| When                       | Screenshot                        | Spend  |
+| -------------------------- | --------------------------------- | ------ |
+| Day 1 EOD (Wed 28/5)       | Pre-flight logs                   | ~$0.00 |
+| Day 2 EOD (Thu 29/5)       | Pre-flight logs                   | ~$0.00 |
+| Friday pre-demo (Fri 30/5) | `../evidence/images/image-30.png` | ~$4.64 |
+
+![Cost Explorer Friday Spend (image-76.png / image-30.png)](image-30.png)
+
 
 ### 7.3 Top-3 Cost Drivers
 
@@ -795,7 +821,7 @@ To resolve bottlenecks associated with processing large files and invoking high-
 
 ### 9.1 Decoupled Data Flow
 
-Statement files are uploaded directly by the client to the S3 bucket. S3 fires an event notification directly into SQS. The Lambda Parser pulls messages when compute resources are available, completely isolating the frontend from processing latency.
+Statement files are uploaded via the frontend through API Gateway to the `budgetbot-api` Lambda. The API Lambda writes the file to the S3 Upload Bucket, sends an asynchronous processing message to the SQS queue, and immediately returns a pending status. The `BudgetBot_Parser_Lambda` is triggered by SQS to retrieve and process the statement from S3, completely isolating the frontend from processing latency.
 
 ![SQS Async Setup](image-65.png)
 ![Parser SQS Configuration](image-66.png)
@@ -835,7 +861,141 @@ DO UPDATE SET
 ![Parser DB Insertion Loop](image-75.png)
 ![Parser Success Log Outputs](image-76.png)
 
+### 9.4 Budget Validation & Alerting Pipeline (`budgetbot-budget-handler`)
+
+The `budgetbot-budget-handler` Lambda functions as the post-processing engine in the transaction pipeline, validating the user's spending data and issuing email alerts when necessary.
+
+#### 1. Core Profile
+
+| Item | Value |
+|---|---|
+| **Lambda Name** | `budgetbot-budget-handler` |
+| **Handler** | `lambda_function_budget.lambda_handler` |
+| **Runtime** | Python 3.11 with compatible Lambda Layer |
+| **Database** | Amazon RDS PostgreSQL |
+| **Secret Storage** | AWS Systems Manager Parameter Store (SecureString) |
+| **Notification Service** | Amazon SNS (Email) |
+| **Logging Service** | Amazon CloudWatch Logs |
+
+#### 2. Position in the System Architecture
+
+The Budget Lambda operates at the final stage of the decoupled transaction processing pipeline:
+
+```mermaid
+graph TD
+    User([User]) -->|1. Upload CSV/PDF| APIGW[API Gateway]
+    APIGW -->|2. Route Upload| ApiLambda[budgetbot-api Lambda]
+    ApiLambda -->|3. Store File| S3[Amazon S3 statements-bucket]
+    ApiLambda -->|4. Send Msg| SQS[Amazon SQS budgetbot-file-queue]
+    SQS -->|5. Trigger Parser| Parser[BudgetBot_Parser_Lambda]
+    Parser -->|6. Store Transactions| RDS[(Amazon RDS PostgreSQL)]
+    Parser -->|7. Async Trigger| BudgetLambda[budgetbot-budget-handler]
+    BudgetLambda -->|8. Query Spending| RDS
+    BudgetLambda -->|9. Threshold Exceeded| SNS[Amazon SNS sns-budget-handlers]
+    SNS -->|10. Send Email Alert| User
+```
+
+The Parser Lambda executes file parsing, transaction extraction, and LLM-based classification. Once transactions are successfully committed to RDS PostgreSQL, it asynchronously triggers the Budget Lambda, ensuring parser throughput is never blocked by alerting overhead.
+
+#### 3. Lambda Processing Logic
+
+The `budgetbot-budget-handler` executes the following sequence:
+
+1. **Retrieve Secret**: Securely pulls the connection parameter `/budgetbot/postgres_url` from Systems Manager (SSM) Parameter Store using decrypted retrieval (`WithDecryption=True`).
+2. **Establish DB Connection**: Resolves the endpoint and authenticates securely to RDS PostgreSQL via `psycopg2` (provided by a reusable PostgreSQL Lambda Layer).
+3. **Fetch Configured Budget**: Reads the monthly category limits and global threshold for the corresponding `user_id` from the `user` table.
+4. **Calculate Spending**: Runs sign-aware SQL grouping and aggregation queries to compute total monthly expenses, completely filtering out positive-value transactions (income, transfers) to prevent budget skewing.
+5. **Evaluate Thresholds**: Compares total spending against the monthly budget. If expenses exceed the threshold, computes usage metrics and parses month-over-month category performance.
+6. **Publish Alert**: Triggers an alert payload directly to the SNS Topic (`arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers`), firing an automated email warning to the user.
+
+#### 4. Event Schema & Execution Signatures
+
+##### Inbound Event Payload (Parser Lambda → Budget Lambda Async Trigger)
+```json
+{
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "file_id": "test"
+}
+```
+
+##### Outbound Successful Execution Payload (No Alert Sent)
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "status": "success",
+    "message": "Budget validation completed.",
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "financial_summary": {
+      "total_budget": 5000.00,
+      "total_spent": 3420.50,
+      "usage_percent": 68.41
+    },
+    "alert_sent": false
+  }
+}
+```
+
+##### Outbound Successful Execution Payload (Alert Sent)
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "status": "success",
+    "message": "Budget threshold exceeded. Email alert dispatched.",
+    "user_id": "00000000-0000-0000-0000-000000000001",
+    "financial_summary": {
+      "total_budget": 5000.00,
+      "total_spent": 5210.80,
+      "usage_percent": 104.22
+    },
+    "alert_sent": true
+  }
+}
+```
+
+#### 5. Environment Parameter Configuration
+
+The Budget Lambda strictly avoids storing plain database connection strings. Parameter storage is abstracted via SSM SecureString:
+
+| Key | Example Value | Purpose |
+|---|---|---|
+| `DB_URL_PARAM_NAME` | `/budgetbot/postgres_url` | SSM parameter containing Postgres URL |
+| `SNS_TOPIC_ARN` | `arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers` | Target SNS Topic for email alerts |
+
+#### 6. Scoped IAM Permissions
+
+The execution role utilizes the least-privilege principle with specific resource constraint actions:
+
+- **Systems Manager (SSM) access**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "ssm:GetParameter",
+    "Resource": "arn:aws:ssm:ap-southeast-1:459983119471:parameter/budgetbot/postgres_url"
+  }
+  ```
+- **Key Management Service (KMS) decryption**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "kms:Decrypt",
+    "Resource": "arn:aws:kms:ap-southeast-1:459983119471:key/b0b19ec3-cf84-430c-a736-3c5695fdec85"
+  }
+  ```
+- **Simple Notification Service (SNS) publishing**:
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "sns:Publish",
+    "Resource": "arn:aws:sns:ap-southeast-1:459983119471:sns-budget-handlers"
+  }
+  ```
+- **VPC Execution Policy**:
+  - `AWSLambdaVPCAccessExecutionRole`: Allows creation/management of ENIs inside private subnets to securely connect to RDS.
+
 ---
+
 
 ## 10. CI/CD Pipeline (Bonus Path B — TO BE COMPLETED)
 
@@ -888,7 +1048,7 @@ Target: All resources deleted by **Sunday 1 June EOD**. Commit teardown screensh
 - **Test account URL:** `https://nvtank.dev`
 - **Sample CSV input:** `docs/sample_input/sample_transactions.csv`
 - **Sample PDF input:** `docs/sample_input/sample_transactions.pdf`
-- **Demo Script & Backup Video:** Available in Google Drive folder.
+- **Demo Script & Backup Video:** Available on [YouTube](https://youtu.be/opciUQY0ZfA) and [Canva Slides](https://canva.link/1fv05agon7hxdwo).
 
 ### Lessons Learned
 
